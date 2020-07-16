@@ -1,0 +1,99 @@
+<html>
+<head>
+    <!--<script src="path/to/svg.js"></script>
+    <script src="path/to/svg.draggy.js"></script>
+    <script src="path/to/svg.connectable.js"></script>-->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.16/svg.min.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.16/svg.js"></script>
+    <!-- <script src="https://vader-coder.github.io/svgDraggyCode/svg.draggy.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.connectable.js/2.0.1/svg.connectable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.connectable.js/2.0.1/svg.connectable.js"></script>-->
+    <script type="text/javascript">
+        function drawChart() {
+            let startX = 5;
+            let startY = 20;
+            let color = '#000';
+            let diameter = 5;
+            let nodeNum = 6, plotXWidth = 300;
+            let yLineCorrection = 2.5;
+            let xLineCorrection = 2.5;
+            let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
+            let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
+            var draw = SVG().addTo('.graph').size(plotXWidth, 130);
+            var rect = draw.circle(diameter).fill(color).move(startX, startY);
+            draw.circle(diameter).fill(color).move(startX+xInterval, startY); 
+            draw.circle(diameter).fill(color).move(startX+xInterval*2, startY); 
+            draw.circle(diameter).fill(color).move(startX+xInterval*3, startY); 
+            draw.circle(diameter).fill(color).move(startX+xInterval*4, startY); 
+            draw.circle(diameter).fill(color).move(startX+xInterval*5, startY); 
+            var line = draw.line(startX+xLineCorrection, startY+yLineCorrection, startX+xInterval*5+xLineCorrection, startY+yLineCorrection);//.move(20, 20);
+            line.stroke({ color: color, width: 1, linecap: 'round' });
+            arrow(draw, color, arrowXStartCoord, startY+yLineCorrection);
+            arrow(draw, color, arrowXStartCoord+xInterval, startY+yLineCorrection);
+            arrow(draw, color, arrowXStartCoord+xInterval*2, startY+yLineCorrection);
+            arrow(draw, color, arrowXStartCoord+xInterval*3, startY+yLineCorrection);
+            arrow(draw, color, arrowXStartCoord+xInterval*4, startY+yLineCorrection);
+            //<path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"></path>
+            let path = draw.path("M 5 20 C 5 20, 40 80, 58 20");
+            path.fill('none');//.move(20, 20);
+            path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' })
+        }
+        function arrow(plot, color, xCoord, yCoord, pointsLeftward) {
+            if (!pointsLeftward) {//arrow points rightward as default
+                let top = plot.line(xCoord-5, yCoord-5, xCoord, yCoord);
+                top.stroke({ color: color, width: 1, linecap: 'round' });
+                bottom = plot.line(xCoord-5, yCoord+5, xCoord, yCoord);
+                bottom.stroke({ color: color, width: 1, linecap: 'round' });
+            }
+            else {//arrow points leftward
+                let top = plot.line(xCoord, yCoord, xCoord+5, yCoord-5);
+                top.stroke({ color: color, width: 1, linecap: 'round' });
+                bottom = plot.line(xCoord, yCoord, xCoord+5, yCoord+5);
+                bottom.stroke({ color: color, width: 1, linecap: 'round' });
+            }
+        }
+    </script>
+</head>
+<body onload="drawStuff()">
+    <div class="graph"></div>
+    <!--<script>
+
+        /*var svg = new SVG(document.querySelector(".graph")).size("100%", 500);
+        //var svg = new SVG().addTo(".graph");
+        var links = svg.group();
+        var markers = svg.group();
+        var nodes = svg.group();
+
+        var g1 = nodes.group().translate(300, 200).draggy();
+        g1.circle(80).fill("#C2185B");
+
+        var g2 = nodes.group().translate(100, 200).draggy();
+        g2.circle(50).fill("#E91E63");
+
+        var g3 = nodes.group().translate(200, 400).draggy();
+        g3.circle(100).fill("#FF5252");
+
+        g1.connectable({
+            container: links,
+            markers: markers
+        }, g2).setLineColor("#5D4037");
+
+        g2.connectable({
+            padEllipse: true
+        }, g3).setLineColor("#5D4037")*/
+    </script>
+
+    <svg width="190" height="160" xmlns="http://www.w3.org/2000/svg">
+
+    <path d="M 10 10 C 20 20, 40 20, 50 10" stroke="black" fill="transparent"/>
+    <path d="M 70 10 C 70 20, 120 20, 120 10" stroke="black" fill="transparent"/>
+    <path d="M 130 10 C 120 20, 180 20, 170 10" stroke="black" fill="transparent"/>
+    <path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"/>
+    <path d="M 70 60 C 70 80, 110 80, 110 60" stroke="black" fill="transparent"/>
+    <path d="M 130 60 C 120 80, 180 80, 170 60" stroke="black" fill="transparent"/>
+    <path d="M 10 110 C 20 140, 40 140, 50 110" stroke="black" fill="transparent"/>
+    <path d="M 70 110 C 70 140, 110 140, 110 110" stroke="black" fill="transparent"/>
+    <path d="M 130 110 C 120 140, 180 140, 170 110" stroke="black" fill="transparent"/>
+  
+  </svg>-->
+</body>
