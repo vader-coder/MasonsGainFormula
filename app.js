@@ -12,6 +12,38 @@ class Edge {
         this.gain = gain;
     }
 };
+class Loop {
+    constructor (from, toNode, adjacencyList) {
+        this.from = from;
+        this.to = toNode.endNode;
+        this.gain = getLoopGain(toNode, from, adjacencyList);
+    }
+};
+function getLoopGain(toNode, from, adjacencyList) {
+    let adjItem = adjacencyList[from], adjItemLen = adjacencyList[from].length, 
+    gain = toNode.gain, to = toNode.endNode;
+    let adjLen = adjacencyList.length, currentNode = to;
+    //loop through adjacency list starting at 'to', 
+    //find gain of all edges between 'to' and 'from' besides the backwards one
+    //by default, 'gain' is set to gain of backwards edge. 
+    for (let adjIndex=to; adjIndex<adjLen; adjIndex++) {
+        adjItem = adjacencyList[adjIndex];
+        adjItemLen = adjItem.length;
+        for (let i=0; i<adjItemLen; i++) {
+            if (adjItem[i].endNode == (currentNode+1)) {
+                gain *= adjItem[i].gain;
+                break;
+            }
+        }
+        if (currentNode == from-1) {
+            break;
+        }
+        else {
+            currentNode++;
+        }
+    }
+    return gain;
+}
 let table, rowIndex = 0, nodeList = [], nodeGraph = [];
 function onBodyLoad() {
     /*let draw = SVG().addTo('body').size(300, 300);
@@ -24,38 +56,52 @@ function onSubmit() {
     //let links = signalFlowGraph.group(), markers = signalFlowGraph.group(), nodes = signalFlowGraph.group();   
     let rows = document.getElementById('table').rows;
     let len = rows.length, from, to, gain, data = [];
+    nodeList = [[]];//empty so indecies line up.
     let i=1;
     if (rows[i]) {
         from = parseInt(rows[i].children[1].children[0].value);
-        to = rows[i].children[2].children[0].value;
-        data.push({from: from.toString(), to:to});
+        to = parseInt(rows[i].children[2].children[0].value);
+        data.push({from: from.toString(), to:to.toString()});
     }
     while (to == from + 1 && rows[i]) {//while from's are consecutive, add nodes to the graph
-        gain = rows[i].children[3].children[0].value;
+        gain = parseInt(rows[i].children[3].children[0].value);
         nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
         i++;
         if (rows[i]) {
             from = parseInt(rows[i].children[1].children[0].value);
-            to = rows[i].children[2].children[0].value;
-            data.push({from: from.toString(), to:to});
+            to = parseInt(rows[i].children[2].children[0].value);
+            data.push({from: from.toString(), to:to.toString()});
         }
     }
     let nodeNum = data.length;
     for (; i<len; i++) {//get the rest.
         from = parseInt(rows[i].children[1].children[0].value);//find('from').val();
-        to = rows[i].children[2].children[0].value;//find('to').val();
-        gain = rows[i].children[3].children[0].value;
+        to = parseInt(rows[i].children[2].children[0].value);//find('to').val();
+        gain = parseInt(rows[i].children[3].children[0].value);
         nodeList[from].push(new Edge(to, gain));
-        data.push({from: from.toString(), to:to});
+        data.push({from: from.toString(), to:to.toString()});
     }
     len = nodeList.length;
+    let loops = [];
+    for (let i=1; i<nodeList.length; i++) {//iterate through nodes
+        for (let j=0; j<nodeList[i].length; j++) {//iterate through list of edges
+            if (nodeList[i][j].endNode < i) {//found edge pointing backwards
+                loops.push(new Loop(i, nodeList[i][j], nodeList));
+            }
+        }
+    }
     drawChart(nodeNum, 'signalFlowGraph');
-    //if did this in first while loop, would interrupt building of data struct
-    //for input.
-    /*for (i=0; i<len; i++) {
-        //nodeList[i][0].graph vs nodeGraph.push()
-        nodeGraph.push(signalFlowGraph.group());
-    }*/
+}
+function getSample() {
+    for (let i=0; i<6; i++) {
+        addRow();
+    }
+    let rows = document.getElementById('table').rows;
+    let last = rows.length-1;
+    rows[last].children[1].children[0].value = 4;
+    rows[last].children[2].children[0].value = 2;
+    rows[last].children[3].children[0].value = 5;
+    rows[2].children[3].children[0].value = 3;
 }
 
 //add empty row to table

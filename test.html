@@ -34,10 +34,36 @@
             arrow(draw, color, arrowXStartCoord+xInterval*3, startY+yLineCorrection);
             arrow(draw, color, arrowXStartCoord+xInterval*4, startY+yLineCorrection);
             //<path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"></path>
+            //M startX, startY C leftSlopeX leftSlopeY, rightSlopeX rightSlopeY, stopX stopY
+            // |slope| = abs((leftSlopeY - startY)/(leftSlopeX - startX)) = abs((rightSlopeY-stopY)/(rightSlopeX - stopX))
+            //  (80 - 60) / (20 - 10) = 20/10 = 2, (80 - 60)/(50 - 60) = 20 / -10 = -2. downward one.
+            //forward will be up, backwards will be down. 
+            getPath([10, 60], [50, 60], 2, 0);
+            //"M 10 60 C 20 80, 40 80, 50 60", 
+            // 20 * 2 = 40
             let path = draw.path("M 5 20 C 5 20, 40 80, 58 20");
             path.fill('none');//.move(20, 20);
-            path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' })
+            path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' });
         }
+        function getPath(startPoint, stopPoint, slopeMag, isOverLine) {
+            let rightPoint = [], leftPoint = [], ret, xInterval = 10;
+            if (!slopeMag) {
+                slopeMag = 2;
+            }
+            if (isOverLine) {//loop above horizontal line of nodes.
+            }
+            else {//under horizontal line. analyze to see if matches sample
+                let yIntercept = startPoint[1] - startPoint[0]*slopeMag;
+                leftPoint = [startPoint[0]+xInterval, slopeMag*(startPoint[0]+xInterval)+yIntercept];
+                rightPoint = [stopPoint[0]-xInterval, slopeMag*(stopPoint[0]-xInterval)+yIntercept];
+            }
+            ret = "M "+startPoint[0].toString() + ' '+startPoint[1].toString()+ " C ";
+            ret += leftPoint[0].toString() + " " + leftPoint[1].toString() + ", ";
+            ret += rightPoint[0].toString() + " " + rightPoint[1].toString() + ", ";
+            ret += stopPoint[0].toString() + " " + stopPoint[1].toString();
+            return ret;
+        }
+        //generates an arrow for plot at coordinates xCoord, yCoord
         function arrow(plot, color, xCoord, yCoord, pointsLeftward) {
             if (!pointsLeftward) {//arrow points rightward as default
                 let top = plot.line(xCoord-5, yCoord-5, xCoord, yCoord);
