@@ -7,3 +7,7 @@ table, tr, th {
 tr, th {
     width: 25%;
 }
+textarea {
+    width: 40vw;
+    height: 25vh;
+}
