@@ -5,82 +5,14 @@
     <script src="path/to/svg.connectable.js"></script>-->
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.16/svg.min.js"></script>-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.0.16/svg.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
     <!-- <script src="https://vader-coder.github.io/svgDraggyCode/svg.draggy.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.connectable.js/2.0.1/svg.connectable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.connectable.js/2.0.1/svg.connectable.js"></script>-->
-    <script type="text/javascript">
-        function drawChart() {
-            let startX = 5;
-            let startY = 20;
-            let color = '#000';
-            let diameter = 5;
-            let nodeNum = 6, plotXWidth = 300;
-            let yLineCorrection = 2.5;
-            let xLineCorrection = 2.5;
-            let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
-            let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
-            var draw = SVG().addTo('.graph').size(plotXWidth, 130);
-            var rect = draw.circle(diameter).fill(color).move(startX, startY);
-            draw.circle(diameter).fill(color).move(startX+xInterval, startY); 
-            draw.circle(diameter).fill(color).move(startX+xInterval*2, startY); 
-            draw.circle(diameter).fill(color).move(startX+xInterval*3, startY); 
-            draw.circle(diameter).fill(color).move(startX+xInterval*4, startY); 
-            draw.circle(diameter).fill(color).move(startX+xInterval*5, startY); 
-            var line = draw.line(startX+xLineCorrection, startY+yLineCorrection, startX+xInterval*5+xLineCorrection, startY+yLineCorrection);//.move(20, 20);
-            line.stroke({ color: color, width: 1, linecap: 'round' });
-            arrow(draw, color, arrowXStartCoord, startY+yLineCorrection);
-            arrow(draw, color, arrowXStartCoord+xInterval, startY+yLineCorrection);
-            arrow(draw, color, arrowXStartCoord+xInterval*2, startY+yLineCorrection);
-            arrow(draw, color, arrowXStartCoord+xInterval*3, startY+yLineCorrection);
-            arrow(draw, color, arrowXStartCoord+xInterval*4, startY+yLineCorrection);
-            //<path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"></path>
-            //M startX, startY C leftSlopeX leftSlopeY, rightSlopeX rightSlopeY, stopX stopY
-            // |slope| = abs((leftSlopeY - startY)/(leftSlopeX - startX)) = abs((rightSlopeY-stopY)/(rightSlopeX - stopX))
-            //  (80 - 60) / (20 - 10) = 20/10 = 2, (80 - 60)/(50 - 60) = 20 / -10 = -2. downward one.
-            //forward will be up, backwards will be down. 
-            getPath([10, 60], [50, 60], 2, 0);
-            //"M 10 60 C 20 80, 40 80, 50 60", 
-            // 20 * 2 = 40
-            let path = draw.path("M 5 20 C 5 20, 40 80, 58 20");
-            path.fill('none');//.move(20, 20);
-            path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' });
-        }
-        function getPath(startPoint, stopPoint, slopeMag, isOverLine) {
-            let rightPoint = [], leftPoint = [], ret, xInterval = 10;
-            if (!slopeMag) {
-                slopeMag = 2;
-            }
-            if (isOverLine) {//loop above horizontal line of nodes.
-            }
-            else {//under horizontal line. analyze to see if matches sample
-                let yIntercept = startPoint[1] - startPoint[0]*slopeMag;
-                leftPoint = [startPoint[0]+xInterval, slopeMag*(startPoint[0]+xInterval)+yIntercept];
-                rightPoint = [stopPoint[0]-xInterval, slopeMag*(stopPoint[0]-xInterval)+yIntercept];
-            }
-            ret = "M "+startPoint[0].toString() + ' '+startPoint[1].toString()+ " C ";
-            ret += leftPoint[0].toString() + " " + leftPoint[1].toString() + ", ";
-            ret += rightPoint[0].toString() + " " + rightPoint[1].toString() + ", ";
-            ret += stopPoint[0].toString() + " " + stopPoint[1].toString();
-            return ret;
-        }
-        //generates an arrow for plot at coordinates xCoord, yCoord
-        function arrow(plot, color, xCoord, yCoord, pointsLeftward) {
-            if (!pointsLeftward) {//arrow points rightward as default
-                let top = plot.line(xCoord-5, yCoord-5, xCoord, yCoord);
-                top.stroke({ color: color, width: 1, linecap: 'round' });
-                bottom = plot.line(xCoord-5, yCoord+5, xCoord, yCoord);
-                bottom.stroke({ color: color, width: 1, linecap: 'round' });
-            }
-            else {//arrow points leftward
-                let top = plot.line(xCoord, yCoord, xCoord+5, yCoord-5);
-                top.stroke({ color: color, width: 1, linecap: 'round' });
-                bottom = plot.line(xCoord, yCoord, xCoord+5, yCoord+5);
-                bottom.stroke({ color: color, width: 1, linecap: 'round' });
-            }
-        }
-    </script>
+    <script src="test.js"></script>
 </head>
-<body onload="drawStuff()">
+<body>
+    <input type="button" value="Draw Chart" onclick="drawChart()"></input>
     <div class="graph"></div>
     <!--<script>
 
@@ -108,18 +40,16 @@
             padEllipse: true
         }, g3).setLineColor("#5D4037")*/
     </script>
-
+    -->
     <svg width="190" height="160" xmlns="http://www.w3.org/2000/svg">
-
-    <path d="M 10 10 C 20 20, 40 20, 50 10" stroke="black" fill="transparent"/>
-    <path d="M 70 10 C 70 20, 120 20, 120 10" stroke="black" fill="transparent"/>
-    <path d="M 130 10 C 120 20, 180 20, 170 10" stroke="black" fill="transparent"/>
-    <path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"/>
-    <path d="M 70 60 C 70 80, 110 80, 110 60" stroke="black" fill="transparent"/>
-    <path d="M 130 60 C 120 80, 180 80, 170 60" stroke="black" fill="transparent"/>
-    <path d="M 10 110 C 20 140, 40 140, 50 110" stroke="black" fill="transparent"/>
-    <path d="M 70 110 C 70 140, 110 140, 110 110" stroke="black" fill="transparent"/>
-    <path d="M 130 110 C 120 140, 180 140, 170 110" stroke="black" fill="transparent"/>
-  
-  </svg>-->
+        <path d="M 10 20 C 20 10, 40 10, 50 20" stroke="black" fill="transparent"/>
+        <path d="M 70 10 C 70 20, 120 20, 120 10" stroke="black" fill="transparent"/>
+        <path d="M 130 10 C 120 20, 180 20, 170 10" stroke="black" fill="transparent"/>
+        <path d="M 10 60 C 20 40, 40 40, 50 60" stroke="black" fill="transparent"/>
+        <path d="M 70 60 C 70 80, 110 80, 110 60" stroke="black" fill="transparent"/>
+        <path d="M 130 60 C 120 80, 180 80, 170 60" stroke="black" fill="transparent"/>
+        <path d="M 10 110 C 20 140, 40 140, 50 110" stroke="black" fill="transparent"/>
+        <path d="M 70 110 C 70 140, 110 140, 110 110" stroke="black" fill="transparent"/>
+        <path d="M 130 110 C 120 140, 180 140, 170 110" stroke="black" fill="transparent"/>
+    </svg>
 </body>

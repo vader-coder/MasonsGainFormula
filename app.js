@@ -47,16 +47,12 @@ class Loop {
         this.to = toNode.endNode;
         this.gain = getLoopGain(toNode, from, adjacencyList);
     }
-    isTouchingPath(path) {
-        if (path.indexOf(this.from) > -1 || path.indexOf(this.to)) {
-            return 1;
-        }
-        /* in case it isn't just endpoints that count as 'touching':
-        for (let i=this.to; i<(this.from+1); i++) {
+    isTouchingPath(path) {//takes array of nodes in path
+        for (let i=this.to; i<=this.from; i++) {
             if (path.indexOf(i) > -1) {
                 return 1;
             }
-        }*/
+        }
         return 0;
     }
 };
@@ -116,11 +112,12 @@ function getNodesFromTable() {
     let rows = document.getElementById('table').rows;
     let rowNum = rows.length, from, to, gain, data = [],
     nodeList = [];//used to include an empty one for indecies.
-    let i=1;
+    let i=1, fileStr;//start i at 0 instead of 1?
     if (rows[i]) {//first one.
         from = parseInt(rows[i].children[1].children[0].value);
         to = parseInt(rows[i].children[2].children[0].value);
         gain = parseInt(rows[i].children[3].children[0].value);
+        fileStr = `0 ${from} ${to} ${gain}`;
         //data.push({from: from.toString(), to:to.toString()});
     }
     while (to == from + 1 && rows[i]) {//while from's are consecutive, add nodes to the graph
@@ -130,6 +127,7 @@ function getNodesFromTable() {
             from = parseInt(rows[i].children[1].children[0].value);
             to = parseInt(rows[i].children[2].children[0].value);
             gain = parseInt(rows[i].children[3].children[0].value);
+            fileStr += `${'\n'}${i-1} ${from} ${to} ${gain}`;
         }
     }
     let forwardNodeList = copyObject(nodeList);
@@ -139,12 +137,14 @@ function getNodesFromTable() {
         from = parseInt(rows[i].children[1].children[0].value);//find('from').val();
         to = parseInt(rows[i].children[2].children[0].value);//find('to').val();
         gain = parseInt(rows[i].children[3].children[0].value);
+        fileStr += `${'\n'}${i-1} ${from} ${to} ${gain}`;
         nodeList[from].push(new Edge(to, gain));
         if (to > from) {//edge is forward, add to forwardNodeList
             forwardNodeList[from].push(new Edge(to, gain));//faster to copy or make your own?
         }//copyObject(nodeList[from][nodeList[from].length-1])
         //data.push({from: from.toString(), to:to.toString()});
     }
+    masonsGainPage.fileStr = fileStr;
     return [nodeList, forwardNodeList, lastNodeIndex];
 }
 //uses a recursive function getForwardPath() to get the array of forward paths.
@@ -169,6 +169,8 @@ function getForwardPath(index, path, gain, adjacencyList, pathArr, lastNodeIndex
     }
 }
 function getNodesFromFile() {
+    masonsGainPage.fileStr = masonsGainPage.inputTarget.value;
+    //string for contents of output file will be file that is uploaded if nodes are retreived from the file.
     let rows = masonsGainPage.inputTarget.value.split('\n');
     let rowNum = rows.length;
     let from, to, gain, nodeList = [];
@@ -209,6 +211,19 @@ function getNodesFromFile() {
     }
     return [nodeList, forwardNodeList, lastNodeIndex];
 }
+function saveFile(content) {
+    var blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+    saveAs(blob, "graphEdges.txt");
+}
+function downloadEdgeFile() {
+    if (masonsGainPage.fileStr) {
+        saveFile(masonsGainPage.fileStr);       
+    }
+    else {
+        saveFile('');
+    }
+}
+
 function onSubmit() {
     let nodeList, forwardNodeList, lastNodeIndex;
     if (masonsGainPage.fileSubmit.checked) {
@@ -226,23 +241,29 @@ function onSubmit() {
     masonsGainPage.loops = loops;
     masonsGainPage.determinant = getDeterminant(loops);
     masonsGainPage.forwardPaths = getForwardPaths(forwardNodeList, lastNodeIndex);
+    masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
+    masonsGainPage.finalGain = masonsGainPage.numerator/masonsGainPage.determinant;
     let nodeNum = nodeList.length+1;
-    drawChart(nodeNum, 'signalFlowGraph');
+    drawChart(nodeList, nodeNum, 'signalFlowGraph');
 }
 //only pass in list of forward paths.
 function getMasonsNumerator(loops, paths) {
     let pathsNum = paths.length;
     let loopNum = loops.length;
-    let loopsPruned;
+    let loopsPruned, numerator = 0;
     for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {
         loopsPruned = [];
         for (let loopIndex = 0; loopIndex < loopNum; loopIndex++) {
-            if (!loopsPrunded[loopIndex].isTouchingPath(paths[pathIndex].path)) {
+            if (!loops[loopIndex].isTouchingPath(paths[pathIndex].path)) {
+                //only push to loopsPruned if not touching forward path. 
                 loopsPruned.push(loops[loopIndex]);
                 //do other stuff to calculate numerator.
             }
         }
+        paths[pathIndex].determinant = getDeterminant(loopsPruned);
+        numerator += paths[pathIndex].determinant*paths[pathIndex].gain;
     }
+    return numerator;
 }
 /*returns a copy of the object obj.
  If we just assign an object to a variable, the variable gets a reference. 
@@ -345,13 +366,13 @@ function getNLoopsGain(loops, loopNum) {
     return gainComponet*Math.pow(-1, loopNum);
 }
 //returns 1 if they share a node, else returns 0.
+//shouldn't be able to share an edge w/o sharing a node.
 function doLoopsShareANode (loop1, loop2) {
-    let loop1Nodes = [loop1.to, loop1.from];
-    let loop2Nodes = [loop2.to, loop2.from];
-    //if (loop1Nodes.indexOf(loop2Nodes[0]) > -1 || loop1Nodes.indexOf(loop2Nodes[1] > -1)) {
-    if (loop1Nodes.indexOf(loop2Nodes[0]) > -1 || loop1Nodes.indexOf(loop2Nodes[1]) > -1) {
-        return 1;
-    }   
+    for (let i=loop1.to; i<=loop1.from; i++) {
+        if (i <= loop2.from && i >= loop2.to) {
+            return 1;
+        }
+    }
     return 0;
 }
 function uncheckFileSubmit() {//uncheckFileSubmit
@@ -415,9 +436,9 @@ function removeAllRows() {
   </tr>`);
 }
 
-function drawChart(nodeNum, id) {
+function drawChart(adjacencyList, nodeNum, id) {
     let startX = 5;
-    let startY = 20;
+    let startY = 40;
     let color = '#000';
     let diameter = 5;
     let plotXWidth = 300;
@@ -426,26 +447,73 @@ function drawChart(nodeNum, id) {
     let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
     let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
     var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
+    let nodes = [], newX;
     for (let i=0; i<last; i++) {
-        draw.circle(diameter).fill(color).move(startX+xInterval*i, startY);
+        newX = startX+xInterval*i;
+        nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
+        draw.circle(diameter).fill(color).move(newX, startY);
         arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
     }
-    draw.circle(diameter).fill(color).move(startX+xInterval*last, startY);//last node won't have an arrow
+    newX = startX+xInterval*last;
+    nodes.push([newX+2, startY]);//[x, y] coordinates.
+    draw.circle(diameter).fill(color).move(newX, startY);//last node won't have an arrow
     var line = draw.line(startX+xLineCorrection, startY+yLineCorrection, startX+xInterval*last+xLineCorrection, startY+yLineCorrection);//.move(20, 20);
     line.stroke({ color: color, width: 1, linecap: 'round' });
+    let endNode, edgeListLen, middleX;
+    //for each edge between non-consecutive loops, draw a path above or below the main line.
+    for (let node = 0; node<adjacencyList.length; node++) {
+        edgeListLen = adjacencyList[node].length;
+        if (edgeListLen > 1) {
+            for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
+                endNode = adjacencyList[node][adjItemIndex].endNode;
+                middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+                if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
+                    drawPath(draw, nodes[node], nodes[endNode]);
+                    arrow(draw, '#000', middleX, startY+15);
+                }
+                else {//points backwards, is a loop.
+                    drawPath(draw, nodes[endNode], nodes[node], 20, 1);
+                    arrow(draw, '#000', middleX, startY-15, 0);
+                }
+            }    
+        }
+    }
     //<path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"></path>
     /*let path = draw.path("M 5 20 C 5 20, 40 80, 58 20");
     path.fill('none');//.move(20, 20);
     path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' });*/
 }
-function arrow(plot, color, xCoord, yCoord, pointsLeftward) {
-    if (!pointsLeftward) {//arrow points rightward as default
+function drawPath(draw, startPoint, stopPoint, slopeMag, isOverLine) {
+    let pathInput = getPath(startPoint, stopPoint, slopeMag, isOverLine);
+    let path = draw.path(pathInput);
+    path.fill('none');//.move(20, 20);
+    path.stroke({ color: '#000', width: 1, linecap: 'round', linejoin: 'round' });
+}
+//returns string describing path of a loop.
+//point[0] is x-coordinate, point[1] is y coordinate.
+function getPath(startPoint, stopPoint, slopeMag = 20, isOverLine) {
+    let rightPoint = [], leftPoint = [], ret, xInterval = 1, leftX, rightX, sign = 1;
+    //let slopeMag = changeMag;
+    leftX = startPoint[0]+xInterval;
+    rightX = stopPoint[0]-xInterval;
+    if (isOverLine) {//loop above horizontal line of nodes.
+        sign = -1;
+    }
+    let yIntercept = startPoint[1];// - startPoint[0]*slopeMag;
+    leftPoint = [leftX, yIntercept + sign*slopeMag*xInterval];//startPoint[1]-changeMag];
+    rightPoint = [rightX, yIntercept + sign*slopeMag*xInterval];//stopPoint[1]-changeMag];
+    ret = `M ${startPoint[0]} ${startPoint[1]} C ${leftPoint[0]} ${leftPoint[1]}, ${rightPoint[0]} ${rightPoint[1]}, ${stopPoint[0]} ${stopPoint[1]}`;
+    return ret;
+}
+function arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1) {
+    if (pointsRightward) {//arrow points rightward as default
         let top = plot.line(xCoord-5, yCoord-5, xCoord, yCoord);
         top.stroke({ color: color, width: 1, linecap: 'round' });
         bottom = plot.line(xCoord-5, yCoord+5, xCoord, yCoord);
         bottom.stroke({ color: color, width: 1, linecap: 'round' });
     }
     else {//arrow points leftward
+        xCoord -= 5;
         let top = plot.line(xCoord, yCoord, xCoord+5, yCoord-5);
         top.stroke({ color: color, width: 1, linecap: 'round' });
         bottom = plot.line(xCoord, yCoord, xCoord+5, yCoord+5);

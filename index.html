@@ -15,15 +15,16 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.connectable.js/2.0.1/svg.connectable.min.js"></script>
   <script src="https://code.highcharts.com/highcharts.js"></script>
   <script src="https://code.highcharts.com/modules/networkgraph.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
 </head>
 
 <body onload="onBodyLoad()">
   <input type="button" onclick="addRow()" value="Add Row"></input>
   <input type="button" onclick="removeLastRow()" value="Remove Last Row"></input>
   <input type="button" onclick="removeAllRows()" value="Delete Rows"></input>
-  <input type="button" onclick="removeRow()" value="Remove Row Number"></input>
   <input type="button" onclick="getSample()" value="Generate Sample"></input>
-  <input type="text" id="rowNum" value="0"></input>
+  <!--<input type="button" onclick="removeRow()" value="Remove Row Number"></input>
+  <input type="text" id="rowNum" value="0"></input>-->
   <br>
   <table id="table">
     <tr>
@@ -46,6 +47,7 @@
   <label for="fileSubmit">Submit Values Through File</label>
   <br><br>
   <input type="button" value="Submit" onclick="onSubmit()"></input><br>
+  <input type="button" value="Download File For Current Graph" onclick="downloadEdgeFile()"></input><br>
   <textarea id="content-target"></textarea>
   <div id='signalFlowGraph'></div>
   <!--<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="300" height="300">
