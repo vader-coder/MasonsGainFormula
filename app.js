@@ -56,6 +56,13 @@ class Loop {
         return 0;
     }
 };
+class LoopCollection {//collection of loops (non-touching.)
+    constructor (loops, gain, determinant) {
+        this.loops = loops;
+        this.gain = gain;
+        this.length = loops.length;
+    }
+}
 
 let table, rowIndex = 0, nodeList = [], nodeGraph = [], masonsGainPage;
 let blackHex = '#000', pinkHex = '#e75480 ';//'#ffc0cb';
@@ -65,6 +72,7 @@ function onBodyLoad() {
     table = document.getElementById('table');
     masonsGainPage = new Page();//might add table to page
     masonsGainPage.loopGraphs = document.getElementById('loopGraphs');
+    masonsGainPage.nonTouchingLoopGraphs = document.getElementById('nonTouchingLoopGraphs');
     masonsGainPage.pathGraphs = document.getElementById('forwardPathGraphs');
     masonsGainPage.pathDesc = document.getElementById('totalGraphDesc');
     masonsGainPage.signalFlowGraph = document.getElementById('signalFlowGraph');
@@ -229,7 +237,7 @@ function downloadEdgeFile() {
     }
 }
 
-function onSubmit() {
+function onSubmit() {//should we call this main()?
     let nodeList, forwardNodeList, lastNodeIndex;
     if (masonsGainPage.fileSubmit.checked) {
         [nodeList, forwardNodeList, lastNodeIndex] = getNodesFromFile();
@@ -245,12 +253,15 @@ function onSubmit() {
     let pathArr = getForwardPaths(forwardNodeList, lastNodeIndex);
     //let loopList = getSetsOfCombinations(['a', 'b', 'c', 'd', 'e'], 3);
     masonsGainPage.loops = loops;
-    masonsGainPage.determinant = getDeterminant(loops);
+    masonsGainPage.nonTouchingLoops = [];//array of sets of non-touching loops.
+    let nonTouchingLoops = masonsGainPage.nonTouchingLoops;
+    masonsGainPage.determinant = getDeterminant(loops, 1);
     masonsGainPage.forwardPaths = pathArr;
     masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
     masonsGainPage.finalGain = masonsGainPage.numerator/masonsGainPage.determinant;
     //erase graphs from last time.
     masonsGainPage.loopGraphs.innerHTML = '';
+    masonsGainPage.nonTouchingLoopGraphs.innerHTML = '';
     masonsGainPage.pathGraphs.innerHTML = '';
     masonsGainPage.pathDesc.innerHTML = '';
     masonsGainPage.signalFlowGraph.innerHTML = '';
@@ -277,6 +288,17 @@ function onSubmit() {
             <p>Loop ${i} Gain: ${loops[i].gain}</p><div id='loop${i}'></div></div>`);
             drawLoopChart(nodeList, nodeNum, `loop${i}`, loops[i]);
         }
+        for (let i=loopNum%2; i<nonTouchingLoops.length; i++) {
+            if (i%2) {
+                bgColor = pathBackGround1;
+            }
+            else {
+                bgColor = loopBackGround1;
+            }
+            masonsGainPage.nonTouchingLoopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
+            <p>${nonTouchingLoops[i].length} Loops in Non-Touching Loops Set #${i} Gain: ${nonTouchingLoops[i].gain}</p><div id='nonTouchingLoop${i}'></div></div>`);
+            drawNonTouchingLoopSetChart(nodeList, nodeNum, `nonTouchingLoop${i}`, nonTouchingLoops[i].loops);
+        }
     }
     if (pathNum > 0) {
         for (let i=0; i<pathNum; i++) {
@@ -291,7 +313,9 @@ function onSubmit() {
             drawPathChart(nodeList, nodeNum, `path${i}`, pathArr[i]);
         }
     }
-
+    console.log(mergeSortNonTouchingLoopSet([{to:9}, {to:5}, {to:3}, {to:1}, {to:7}]));
+    //console.log(mergeNonTouchingLoopSets([{to:1}, {to:4}], [{to:2}, {to:3}, {to:5}]));
+    //1, 3, 5, 7, 9
 }
 //only pass in list of forward paths.
 function getMasonsNumerator(loops, paths) {
@@ -359,7 +383,7 @@ function getLoops (nodeList) {
 }
 //calculate determinant using an array of loops.
 //assume at least one loop. 
-function getDeterminant (loops) {
+function getDeterminant (loops, makeNonTouchingLoopsList) {
     let determinant = 1, loopNum = loops.length;
     //gains of individual loops
     /*for (let i=0; i<loopNum; i++) { 
@@ -381,13 +405,13 @@ function getDeterminant (loops) {
         sets = getSetsOfCombinations(loops, i);
         for (let j=0; j<sets.length; j++) {//loop through sets and add to determinant if x sharing.
             set = sets[j];
-            determinant += getNLoopsGain(set, set.length);
+            determinant += getNLoopsGain(set, set.length, makeNonTouchingLoopsList);
         }
     }
     return determinant;
 }
 //get gain contribution for a specific set of non-touching loops.
-function getNLoopsGain(loops, loopNum) {
+function getNLoopsGain(loops, loopNum, makeNonTouchingLoopsList) {
     let gainComponet = 1;
     let j;
     //try to find if any loops share a node:
@@ -398,14 +422,14 @@ function getNLoopsGain(loops, loopNum) {
                 if (doLoopsShareANode(loops[i], loops[j])) {
                     return 0;
                 }
-                /*else {
-                    gainComponet += loops[i].gain*loops[j].gain;
-                }*/
                 j++;//forgot this in a dumb mistake.
             }
             //multipy loop gains together to get gain componet.
             gainComponet *= loops[i].gain;
-        }    
+        }
+        if (makeNonTouchingLoopsList) {//find out if is a more efficient way of doing this.
+            masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainComponet));//if loops don't touch, push them.     
+        }
     }
     else {
         gainComponet = loops[0].gain;
@@ -555,6 +579,89 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
         }
     }
 }
+function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
+    let startX = 5;
+    let startY = 40;
+    let color = blackHex;//ffcccc
+    let diameter = 5;
+    let plotXWidth = 300;
+    let yLineCorrection = 2.5;
+    let xLineCorrection = 2.5;
+    let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
+    let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
+    var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
+    let nodes = [], newX, line, loopIndex = 0;
+    loopSet = mergeSortNonTouchingLoopSet(loopSet);//sort in ascending order w/ merge sort
+    //loopSet sorted in ascending .to order. 
+    for (let i=0; i<last; i++) {
+        newX = startX+xInterval*i;
+        nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
+        loop = loopSet[loopIndex];
+        if (loop) {
+            if (isInLoop(loop, i) && isInLoop(loop, i+1)) {//both this node & next node are in the loop.
+                draw.circle(diameter).fill(pinkHex).move(newX, startY);
+                arrow(draw, pinkHex, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+                color = pinkHex;
+            }
+            else if (loop.from == i) {//isInLoop(loop, i)) {//last node in loop.
+                draw.circle(diameter).fill(pinkHex).move(newX, startY);
+                arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+                loopIndex++;//after finish last node last node in loop, switch to another loop. 
+                color = blackHex;
+            }
+            else {//node was in none of loops. 
+                draw.circle(diameter).fill(color).move(newX, startY);
+                arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+                color = blackHex;
+            } 
+        }
+        else {//node was in none of loops. 
+            draw.circle(diameter).fill(color).move(newX, startY);
+            arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+            color = blackHex;
+        }
+        /*draw.circle(diameter).fill(color).move(newX, startY);
+        arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);*/
+        line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
+        line.stroke({ color: color, width: 1, linecap: 'round' });
+        color = blackHex;
+    }//too many color = blackHex; statements?
+    color = blackHex;
+    newX = startX+xInterval*last;
+    nodes.push([newX+2, startY]);//[x, y] coordinates.
+    draw.circle(diameter).fill(color).move(newX, startY);//last node won't have an arrow
+    /*line = draw.line(startX+xLineCorrection, startY+yLineCorrection, startX+xInterval*last+xLineCorrection, startY+yLineCorrection);
+    line.stroke({ color: color, width: 1, linecap: 'round' });*/
+    let endNode, edgeListLen, middleX;
+    //for each edge between non-consecutive loops, draw a path above or below the main line.
+    loopIndex = 0;
+    loop = loopSet[loopIndex];
+    for (let node = 0; node<adjacencyList.length; node++) {
+        edgeListLen = adjacencyList[node].length;
+        if (edgeListLen > 1) {
+            for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
+                endNode = adjacencyList[node][adjItemIndex].endNode;
+                middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+                if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15);
+                }
+                else {//points backwards, is a loop.
+                    if (loop) {
+                        if (node == loop.from && endNode == loop.to) {
+                            color = pinkHex;
+                            loopIndex++;
+                            loop = loopSet[loopIndex];
+                        }
+                    }
+                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15, 0);
+                }
+                color = blackHex;//set back to black by default.
+            }    
+        }
+    }
+}
 function drawPathChart(adjacencyList, nodeNum, id, pathObj) {
     let path = pathObj.path;
     let pathNodeIndex = 0;
@@ -623,6 +730,57 @@ function drawPathChart(adjacencyList, nodeNum, id, pathObj) {
             }    
         }
     }
+}
+//merge sort, but for a set of non-touching loops.
+function mergeSortNonTouchingLoopSet(loopSet) {
+    let temp;
+    if (loopSet.length == 2) {
+        if (loopSet[0].to > loopSet[1].to) {
+            temp = copyObject(loopSet[0]);
+            loopSet[0] = copyObject(loopSet[1]);
+            loopSet[1] = temp;
+            return loopSet;//sort two elements.
+        }
+        else {
+            return loopSet;//already sorted;
+        }
+    }
+    if (loopSet.length < 2) {
+        return loopSet;
+    }
+    let mid = parseInt(loopSet.length/2);
+    let leftHalf = loopSet.slice(0, mid);
+    let rightHalf = loopSet.slice(mid);
+    return mergeNonTouchingLoopSets(mergeSortNonTouchingLoopSet(leftHalf), mergeSortNonTouchingLoopSet(rightHalf));
+}
+//merge sorted sets of non-touching loops into larger ones.
+function mergeNonTouchingLoopSets(loopSet1, loopSet2) {
+    let loopSet3 = [];
+    let set1Index = 0;
+    let set2Index = 0;
+    let set1Len = loopSet1.length;
+    let set2Len = loopSet2.length;
+    while(set1Index < set1Len && set2Index < set2Len) {
+        if (loopSet1[set1Index].to < loopSet2[set2Index].to) {
+            loopSet3.push(loopSet1[set1Index]);
+            set1Index++;
+        }
+        else {
+            loopSet3.push(loopSet2[set2Index]);
+            set2Index++;
+        }
+    }
+    if (set1Len > set2Len) {
+        for (; set1Index<set1Len; set1Index++) {
+            loopSet3.push(loopSet1[set1Index]);
+        }
+    }
+    else if (set2Len > set1Len) {
+        for (; set2Index<set2Len; set2Index++) {
+            loopSet3.push(loopSet2[set2Index]);
+        }
+    }
+    return loopSet3;
 }
 function drawFullChart(adjacencyList, nodeNum, id) {
     let startX = 5;
