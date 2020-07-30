@@ -11,3 +11,6 @@ textarea {
     width: 40vw;
     height: 25vh;
 }
+body {
+    font-family: Helvetica, Arial, sans-serif;
+}

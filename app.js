@@ -58,11 +58,16 @@ class Loop {
 };
 
 let table, rowIndex = 0, nodeList = [], nodeGraph = [], masonsGainPage;
+let blackHex = '#000', pinkHex = '#e75480 ';//'#ffc0cb';
 function onBodyLoad() {
     /*let draw = SVG().addTo('body').size(300, 300);
     let rect = draw.rect(100, 100).attr({fill: '#f06'})*/
     table = document.getElementById('table');
     masonsGainPage = new Page();//might add table to page
+    masonsGainPage.loopGraphs = document.getElementById('loopGraphs');
+    masonsGainPage.pathGraphs = document.getElementById('forwardPathGraphs');
+    masonsGainPage.pathDesc = document.getElementById('totalGraphDesc');
+    masonsGainPage.signalFlowGraph = document.getElementById('signalFlowGraph');
     document.getElementById('fileInput').addEventListener('change', fileHandler);
 }
 function fileHandler(event) {
@@ -237,14 +242,56 @@ function onSubmit() {
         return;
     }
     let loops = getLoops(nodeList);
+    let pathArr = getForwardPaths(forwardNodeList, lastNodeIndex);
     //let loopList = getSetsOfCombinations(['a', 'b', 'c', 'd', 'e'], 3);
     masonsGainPage.loops = loops;
     masonsGainPage.determinant = getDeterminant(loops);
-    masonsGainPage.forwardPaths = getForwardPaths(forwardNodeList, lastNodeIndex);
+    masonsGainPage.forwardPaths = pathArr;
     masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
     masonsGainPage.finalGain = masonsGainPage.numerator/masonsGainPage.determinant;
+    //erase graphs from last time.
+    masonsGainPage.loopGraphs.innerHTML = '';
+    masonsGainPage.pathGraphs.innerHTML = '';
+    masonsGainPage.pathDesc.innerHTML = '';
+    masonsGainPage.signalFlowGraph.innerHTML = '';
+
     let nodeNum = nodeList.length+1;
-    drawChart(nodeList, nodeNum, 'signalFlowGraph');
+
+    drawFullChart(nodeList, nodeNum, 'signalFlowGraph');
+    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: ${masonsGainPage.finalGain}`;
+    document.getElementById('signalFlowGraph').scrollIntoView();
+    let loopNum = loops.length;
+    let pathNum = pathArr.length, bgColor;
+    let loopBackGround1 = '#e8f4f8';
+    let pathBackGround1 = '#FFE6EE';//pink //'#f7f7f7';//white smoke
+    let pathBackGround2 = '#FAEBD7';//'#FFFDD0';//cream //'#FFFAFA'//snow
+    if (loopNum > 0) {
+        for (let i=0; i<loopNum; i++) {
+            if (i%2) {
+                bgColor = pathBackGround1;
+            }
+            else {
+                bgColor = loopBackGround1;
+            }
+            masonsGainPage.loopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
+            <p>Loop ${i} Gain: ${loops[i].gain}</p><div id='loop${i}'></div></div>`);
+            drawLoopChart(nodeList, nodeNum, `loop${i}`, loops[i]);
+        }
+    }
+    if (pathNum > 0) {
+        for (let i=0; i<pathNum; i++) {
+            if (i%2) {
+                bgColor = pathBackGround1;
+            }
+            else {
+                bgColor = pathBackGround2;
+            }
+            masonsGainPage.pathGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
+            <p>Forward Path ${i} Gain: ${pathArr[i].gain}</p><div id='path${i}'></div></div>`);
+            drawPathChart(nodeList, nodeNum, `path${i}`, pathArr[i]);
+        }
+    }
+
 }
 //only pass in list of forward paths.
 function getMasonsNumerator(loops, paths) {
@@ -435,11 +482,152 @@ function removeAllRows() {
     <th>gain</th>
   </tr>`);
 }
-
-function drawChart(adjacencyList, nodeNum, id) {
+//returns one if node number 'node' is within loop.
+function isInLoop(loop, node) {
+    if (node >= loop.to && node <= loop.from) {
+        return 1;
+    }
+    return 0;
+}
+function drawLoopChart(adjacencyList, nodeNum, id, loop) {
     let startX = 5;
     let startY = 40;
-    let color = '#000';
+    let color = blackHex;//ffcccc
+    let diameter = 5;
+    let plotXWidth = 300;
+    let yLineCorrection = 2.5;
+    let xLineCorrection = 2.5;
+    let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
+    let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
+    var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
+    let nodes = [], newX, line;
+    for (let i=0; i<last; i++) {
+        newX = startX+xInterval*i;
+        nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
+        if (isInLoop(loop, i) && isInLoop(loop, i+1)) {//both this node & next node are in the loop.
+            draw.circle(diameter).fill(pinkHex).move(newX, startY);
+            arrow(draw, pinkHex, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+            color = pinkHex;
+        }
+        else if (isInLoop(loop, i)) {//last node in loop.
+            draw.circle(diameter).fill(pinkHex).move(newX, startY);
+            arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+            color = blackHex;
+        }
+        else {
+            draw.circle(diameter).fill(color).move(newX, startY);
+            arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+            color = blackHex;
+        }
+        /*draw.circle(diameter).fill(color).move(newX, startY);
+        arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);*/
+        line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
+        line.stroke({ color: color, width: 1, linecap: 'round' });
+        color = blackHex;
+    }
+    color = blackHex;
+    newX = startX+xInterval*last;
+    nodes.push([newX+2, startY]);//[x, y] coordinates.
+    draw.circle(diameter).fill(color).move(newX, startY);//last node won't have an arrow
+    /*line = draw.line(startX+xLineCorrection, startY+yLineCorrection, startX+xInterval*last+xLineCorrection, startY+yLineCorrection);
+    line.stroke({ color: color, width: 1, linecap: 'round' });*/
+    let endNode, edgeListLen, middleX;
+    //for each edge between non-consecutive loops, draw a path above or below the main line.
+    for (let node = 0; node<adjacencyList.length; node++) {
+        edgeListLen = adjacencyList[node].length;
+        if (edgeListLen > 1) {
+            for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
+                endNode = adjacencyList[node][adjItemIndex].endNode;
+                middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+                if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15);
+                }
+                else {//points backwards, is a loop.
+                    if (node == loop.from && endNode == loop.to) {
+                        color = pinkHex;
+                    }
+                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15, 0);
+                }
+                color = blackHex;//set back to black by default.
+            }    
+        }
+    }
+}
+function drawPathChart(adjacencyList, nodeNum, id, pathObj) {
+    let path = pathObj.path;
+    let pathNodeIndex = 0;
+    let startX = 5;
+    let startY = 40;
+    let color = blackHex;//ffcccc
+    let diameter = 5;
+    let plotXWidth = 300;
+    let yLineCorrection = 2.5;
+    let xLineCorrection = 2.5;
+    let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
+    let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
+    var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
+    let nodes = [], newX, line;
+    for (let i=0; i<last; i++) {
+        newX = startX+xInterval*i;
+        nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
+        if (i == path[pathNodeIndex]) {
+            draw.circle(diameter).fill(pinkHex).move(newX, startY);
+            if (i+1 == path[pathNodeIndex+1]) {
+                arrow(draw, pinkHex, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+                color = pinkHex;                
+            }
+            else {
+                arrow(draw, blackHex, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+            }
+            pathNodeIndex++;
+        }
+        else {
+            draw.circle(diameter).fill(blackHex).move(newX, startY);
+            arrow(draw, blackHex, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+            color = blackHex;
+        }
+        line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
+        line.stroke({ color: color, width: 1, linecap: 'round' });
+        color = blackHex;
+    }
+    newX = startX+xInterval*last;
+    nodes.push([newX+2, startY]);//[x, y] coordinates.
+    draw.circle(diameter).fill(pinkHex).move(newX, startY);//last node won't have an arrow
+    /*var line = draw.line(startX+xLineCorrection, startY+yLineCorrection, startX+xInterval*last+xLineCorrection, startY+yLineCorrection);//.move(20, 20);
+    line.stroke({ color: color, width: 1, linecap: 'round' });*/
+    let endNode, edgeListLen, middleX, firstNodeIndex, secondNodeIndex;
+    //for each edge between non-consecutive loops, draw a path above or below the main line.
+    for (let node = 0; node<adjacencyList.length; node++) {
+        edgeListLen = adjacencyList[node].length;
+        if (edgeListLen > 1) {
+            for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
+                endNode = adjacencyList[node][adjItemIndex].endNode;
+                middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+                if (node < endNode) {//path is a forward path.
+                    firstNodeIndex = path.indexOf(node);
+                    secondNodeIndex = path.indexOf(endNode);
+                    //path is our forward path
+                    if (firstNodeIndex > -1 && secondNodeIndex > -1 && firstNodeIndex+1 == secondNodeIndex) {
+                        color = pinkHex;
+                    }
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15);
+                }
+                else {//points backwards, is a loop.
+                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15, 0);
+                }
+                color = blackHex;//set back to black by default.
+            }    
+        }
+    }
+}
+function drawFullChart(adjacencyList, nodeNum, id) {
+    let startX = 5;
+    let startY = 40;
+    let color = blackHex;//ffcccc
     let diameter = 5;
     let plotXWidth = 300;
     let yLineCorrection = 2.5;
@@ -468,26 +656,22 @@ function drawChart(adjacencyList, nodeNum, id) {
                 endNode = adjacencyList[node][adjItemIndex].endNode;
                 middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
                 if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
-                    drawPath(draw, nodes[node], nodes[endNode]);
-                    arrow(draw, '#000', middleX, startY+15);
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15);
                 }
                 else {//points backwards, is a loop.
-                    drawPath(draw, nodes[endNode], nodes[node], 20, 1);
-                    arrow(draw, '#000', middleX, startY-15, 0);
+                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15, 0);
                 }
             }    
         }
     }
-    //<path d="M 10 60 C 20 80, 40 80, 50 60" stroke="black" fill="transparent"></path>
-    /*let path = draw.path("M 5 20 C 5 20, 40 80, 58 20");
-    path.fill('none');//.move(20, 20);
-    path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' });*/
 }
-function drawPath(draw, startPoint, stopPoint, slopeMag, isOverLine) {
+function drawPath(draw, startPoint, stopPoint, color, slopeMag, isOverLine) {
     let pathInput = getPath(startPoint, stopPoint, slopeMag, isOverLine);
     let path = draw.path(pathInput);
     path.fill('none');//.move(20, 20);
-    path.stroke({ color: '#000', width: 1, linecap: 'round', linejoin: 'round' });
+    path.stroke({ color: color, width: 1, linecap: 'round', linejoin: 'round' });
 }
 //returns string describing path of a loop.
 //point[0] is x-coordinate, point[1] is y coordinate.
