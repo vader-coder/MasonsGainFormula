@@ -76,6 +76,7 @@ function onBodyLoad() {
     masonsGainPage.pathGraphs = document.getElementById('forwardPathGraphs');
     masonsGainPage.pathDesc = document.getElementById('totalGraphDesc');
     masonsGainPage.signalFlowGraph = document.getElementById('signalFlowGraph');
+    masonsGainPage.determinantDesc = document.getElementById('determinantStr');
     document.getElementById('fileInput').addEventListener('change', fileHandler);
 }
 function fileHandler(event) {
@@ -236,7 +237,6 @@ function downloadEdgeFile() {
         saveFile('');
     }
 }
-
 function onSubmit() {//should we call this main()?
     let nodeList, forwardNodeList, lastNodeIndex;
     if (masonsGainPage.fileSubmit.checked) {
@@ -255,8 +255,12 @@ function onSubmit() {//should we call this main()?
     masonsGainPage.loops = loops;
     masonsGainPage.nonTouchingLoops = [];//array of sets of non-touching loops.
     let nonTouchingLoops = masonsGainPage.nonTouchingLoops;
+    masonsGainPage.numeratorStr = ``;
+    masonsGainPage.denominatorStr = `1 `;
     masonsGainPage.determinant = getDeterminant(loops, 1);
     masonsGainPage.forwardPaths = pathArr;
+    let loopLabels = 'ijklmnopqrstuvwxyzabcdefghIGKLMNOPQRSTUVWXYZABCDEF';//might need to include a check. 
+    //arrange so only loop through this once.
     masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
     masonsGainPage.finalGain = masonsGainPage.numerator/masonsGainPage.determinant;
     //erase graphs from last time.
@@ -276,6 +280,7 @@ function onSubmit() {//should we call this main()?
     let loopBackGround1 = '#e8f4f8';
     let pathBackGround1 = '#FFE6EE';//pink //'#f7f7f7';//white smoke
     let pathBackGround2 = '#FAEBD7';//'#FFFDD0';//cream //'#FFFAFA'//snow
+    masonsGainPage.determinantDesc.innerHTML = masonsGainPage.denominatorStr;
     if (loopNum > 0) {
         for (let i=0; i<loopNum; i++) {
             if (i%2) {
@@ -384,28 +389,21 @@ function getLoops (nodeList) {
 //calculate determinant using an array of loops.
 //assume at least one loop. 
 function getDeterminant (loops, makeNonTouchingLoopsList) {
-    let determinant = 1, loopNum = loops.length;
+    let determinant = 1, loopNum = loops.length, det, detComponet;
     //gains of individual loops
-    /*for (let i=0; i<loopNum; i++) { 
-        ret -= loops[i].gain;
-    }
-    if (loopNum > 1) {
-        let j;
-        for (let i=0; i<loopNum; i++) {
-            j = i;
-            while (j < loopNum) {
-                if (doLoopsShareANode(loops[i], loops[j])) {
-                    ret += loops[i].gain*loops[j].gain;
-                }
-            }
-        }
-    }*/
     let set, sets;
-    for (let i=loopNum; i>0; i--) {//5, 4, 3, 2, 1, etc. 
+    //for (let i=loopNum; i>0; i--) {//5, 4, 3, 2, 1, etc. 
+    for (let i=1; i<=loopNum; i++) {//1, 2, 3, 4, 5
         sets = getSetsOfCombinations(loops, i);
+        detComponet = 0;
         for (let j=0; j<sets.length; j++) {//loop through sets and add to determinant if x sharing.
             set = sets[j];
-            determinant += getNLoopsGain(set, set.length, makeNonTouchingLoopsList);
+            det = getNLoopsGain(set, set.length, makeNonTouchingLoopsList);
+            determinant += det;
+            detComponet += det;
+        }
+        if (makeNonTouchingLoopsList) {
+            masonsGainPage.denominatorStr += `+ ${detComponet}`;
         }
     }
     return determinant;

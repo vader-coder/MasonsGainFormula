@@ -14,3 +14,10 @@ textarea {
 body {
     font-family: Helvetica, Arial, sans-serif;
 }
+.halfWidthEach {/* Splits div in half in terms of screen width.*/
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+}
+.left {
+    float: left;
+}
