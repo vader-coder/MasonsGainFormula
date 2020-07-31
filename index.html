@@ -17,7 +17,7 @@
   <script src="https://code.highcharts.com/modules/networkgraph.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 
 <body onload="onBodyLoad()">
@@ -80,6 +80,12 @@
   </p></small>
   <p id='totalGraphDesc'></p>
   <div id='signalFlowGraph'></div><br>
+  <div class="halfWidthEach">
+    <div class="math">
+      <div class="left" id='numeratorStr'></div>
+    </div>
+    <div></div>
+  </div><br>
   <div id='determinantStr'></div>
   <div id='loopGraphs'></div>
   <div id='nonTouchingLoopGraphs'></div>

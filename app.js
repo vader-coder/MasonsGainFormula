@@ -77,6 +77,7 @@ function onBodyLoad() {
     masonsGainPage.pathDesc = document.getElementById('totalGraphDesc');
     masonsGainPage.signalFlowGraph = document.getElementById('signalFlowGraph');
     masonsGainPage.determinantDesc = document.getElementById('determinantStr');
+    masonsGainPage.numeratorHTML = document.getElementById('numeratorStr');
     document.getElementById('fileInput').addEventListener('change', fileHandler);
 }
 function fileHandler(event) {
@@ -255,14 +256,24 @@ function onSubmit() {//should we call this main()?
     masonsGainPage.loops = loops;
     masonsGainPage.nonTouchingLoops = [];//array of sets of non-touching loops.
     let nonTouchingLoops = masonsGainPage.nonTouchingLoops;
-    masonsGainPage.numeratorStr = ``;
-    masonsGainPage.denominatorStr = `1 `;
+    masonsGainPage.numeratorStr = `$$\\sum_{k=1}^N  {G_k \\Delta _k} = `;
+    masonsGainPage.numeratorDesc = ``;
+    masonsGainPage.denominatorDesc = ``;
+    masonsGainPage.denominatorStr = `&Delta; = 1 `;
+    masonsGainPage.loopLabels = 'ijklmnopqrstuvwxyzabcdefghIGKLMNOPQRSTUVWXYZABCDEF';//might need to include a check. 
     masonsGainPage.determinant = getDeterminant(loops, 1);
     masonsGainPage.forwardPaths = pathArr;
-    let loopLabels = 'ijklmnopqrstuvwxyzabcdefghIGKLMNOPQRSTUVWXYZABCDEF';//might need to include a check. 
     //arrange so only loop through this once.
     masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
+    if (masonsGainPage.numeratorStr.indexOf('+') > -1) {//more than 1 element.
+        masonsGainPage.numeratorStr += ` = ${masonsGainPage.numerator}$$`;
+    }
+    else {
+        masonsGainPage.numeratorStr += `$$`;
+    }
+    masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant}`;
     masonsGainPage.finalGain = masonsGainPage.numerator/masonsGainPage.determinant;
+    
     //erase graphs from last time.
     masonsGainPage.loopGraphs.innerHTML = '';
     masonsGainPage.nonTouchingLoopGraphs.innerHTML = '';
@@ -274,13 +285,17 @@ function onSubmit() {//should we call this main()?
 
     drawFullChart(nodeList, nodeNum, 'signalFlowGraph');
     masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: ${masonsGainPage.finalGain}`;
-    document.getElementById('signalFlowGraph').scrollIntoView();
+    masonsGainPage.signalFlowGraph.scrollIntoView();
     let loopNum = loops.length;
     let pathNum = pathArr.length, bgColor;
     let loopBackGround1 = '#e8f4f8';
     let pathBackGround1 = '#FFE6EE';//pink //'#f7f7f7';//white smoke
     let pathBackGround2 = '#FAEBD7';//'#FFFDD0';//cream //'#FFFAFA'//snow
-    masonsGainPage.determinantDesc.innerHTML = masonsGainPage.denominatorStr;
+    let yCaption = `<div class="halfWidthEach"><div class="math"><div class="left">$$y_\\text{in}:$$</div></div><div></div></div><br>`;
+    masonsGainPage.determinantDesc.innerHTML = yCaption+masonsGainPage.denominatorDesc+masonsGainPage.denominatorStr;
+    masonsGainPage.numeratorHTML.innerHTML = `$$y_\\text{out}:$$` + masonsGainPage.numeratorDesc+masonsGainPage.numeratorStr;
+    //MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+    MathJax.typeset();//see if works when change it, otherwise would need promise.
     if (loopNum > 0) {
         for (let i=0; i<loopNum; i++) {
             if (i%2) {
@@ -326,7 +341,7 @@ function onSubmit() {//should we call this main()?
 function getMasonsNumerator(loops, paths) {
     let pathsNum = paths.length;
     let loopNum = loops.length;
-    let loopsPruned, numerator = 0;
+    let loopsPruned, numerator = 0, detComponet, sumNum;
     for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {
         loopsPruned = [];
         for (let loopIndex = 0; loopIndex < loopNum; loopIndex++) {
@@ -337,7 +352,16 @@ function getMasonsNumerator(loops, paths) {
             }
         }
         paths[pathIndex].determinant = getDeterminant(loopsPruned);
-        numerator += paths[pathIndex].determinant*paths[pathIndex].gain;
+        detComponet = paths[pathIndex].determinant*paths[pathIndex].gain; 
+        numerator += detComponet;
+        sumNum = pathIndex+1;
+        masonsGainPage.numeratorDesc += `$$G_${sumNum} \\Delta _${sumNum} = ${paths[pathIndex].gain}\\cdot${paths[pathIndex].determinant}$$<br>`;
+        if (!pathIndex) {//don't want the first one to have a + out front.
+            masonsGainPage.numeratorStr += ` ${detComponet}`;
+        }
+        else {
+            masonsGainPage.numeratorStr += `+ ${detComponet}`;
+        }
     }
     return numerator;
 }
@@ -391,7 +415,7 @@ function getLoops (nodeList) {
 function getDeterminant (loops, makeNonTouchingLoopsList) {
     let determinant = 1, loopNum = loops.length, det, detComponet;
     //gains of individual loops
-    let set, sets;
+    let set, sets, label = ``;
     //for (let i=loopNum; i>0; i--) {//5, 4, 3, 2, 1, etc. 
     for (let i=1; i<=loopNum; i++) {//1, 2, 3, 4, 5
         sets = getSetsOfCombinations(loops, i);
@@ -402,8 +426,16 @@ function getDeterminant (loops, makeNonTouchingLoopsList) {
             determinant += det;
             detComponet += det;
         }
+        if (!detComponet) {//once one componet = 0, all the rest will also = 0.
+            break;
+        }
         if (makeNonTouchingLoopsList) {
             masonsGainPage.denominatorStr += `+ ${detComponet}`;
+            for (let j=0; j<i; j++) {
+                label+=`L<sub>${masonsGainPage.loopLabels[j]}</sub>`;
+            }
+            masonsGainPage.denominatorDesc += `&sum; ${label}: ${detComponet}<br>`;
+            label = ``;
         }
     }
     return determinant;
