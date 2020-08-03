@@ -180,7 +180,7 @@ function getForwardPath(index, path, gain, adjacencyList, pathArr, lastNodeIndex
     let forwardEdgesNum = forwardEdges.length;
     for (let i=0; i<forwardEdgesNum; i++) {
         edge = forwardEdges[i];
-        getForwardPath(edge.endNode, copyObject(path), gain.multiply(edge.gain), adjacencyList, pathArr, lastNodeIndex);
+        getForwardPath(edge.endNode, copy1DArr(path), gain.multiply(edge.gain), adjacencyList, pathArr, lastNodeIndex);
     }
 }
 //gets nodes & edges from file. store gains as nerdamer objects so can do arithmetic.
@@ -368,7 +368,12 @@ function getMasonsNumerator(loops, paths) {
  Before I used this function, changing the transparency of a term 
  in the topmost plot would also change that of the term in the 'putting it all together' plot*/
 function copyObject(obj) {
-   return JSON.parse(JSON.stringify(obj));
+   //return JSON.parse(JSON.stringify(obj));
+   return jQuery.extend(true, {}, obj);
+}
+//copy a 1D array.
+function copy1DArr(arr) {
+    return arr.slice();
 }
 function getSetsOfCombinations(list, setLen) {
     set = [];
@@ -381,7 +386,7 @@ function getSet(list, set, setTargetLen, setIndex, listIndex, setOfSets) {
         setOfSets.push(set);
     }
     else if (listIndex < list.length) {
-        let newSet = copyObject(set);
+        let newSet = copy1DArr(set);//shouldn't need a deep copy since not changing loop attributes.
         let newElement = list[listIndex];
         if (setIndex == set.length) {
             newSet.push(newElement);
@@ -424,7 +429,7 @@ function getDeterminant (loops, makeNonTouchingLoopsList) {
             determinant = determinant.add(det);
             detComponet = detComponet.add(det);//should we do mult instead?
         }
-        if (!detComponet) {//once one componet = 0, all the rest will also = 0.
+        if (!detComponet.symbol.multiplier.num.value) {//once one componet = 0, all the rest will also = 0.
             break;
         }
         if (makeNonTouchingLoopsList) {
@@ -574,6 +579,7 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
         }
         line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
         line.stroke({ color: color, width: 1, linecap: 'round' });
+        draw.text(adjacencyList[i][0].gain.toString()).move(arrowXStartCoord+xInterval*i, startY-5).fill(color);
         color = blackHex;
     }
     color = blackHex;
@@ -593,6 +599,7 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
                 if (node < endNode) {//path, points forward.
                     drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
                     arrow(draw, color, middleX, startY-15);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY-35);
                 }
                 else {//points backwards, is a loop.
                     if (node == loop.from && endNode == loop.to) {
@@ -600,6 +607,7 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
                     }
                     drawPath(draw, nodes[node], nodes[endNode], color);
                     arrow(draw, color, middleX, startY+15, 0);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15).fill(color);
                 }
                 color = blackHex;//set back to black by default.
             }    
@@ -651,6 +659,7 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
         arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);*/
         line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
         line.stroke({ color: color, width: 1, linecap: 'round' });
+        draw.text(adjacencyList[i][0].gain.toString()).move(arrowXStartCoord+xInterval*i, startY-5).fill(color);
         color = blackHex;
     }//too many color = blackHex; statements?
     color = blackHex;
@@ -672,6 +681,7 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
                 if (node < endNode) {//points forwards, is forward path edge
                     drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
                     arrow(draw, color, middleX, startY-15);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY-35);
                 }
                 else {//points backwards, is a loop.
                     if (loop) {
@@ -683,6 +693,7 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
                     }
                     drawPath(draw, nodes[node], nodes[endNode], color);
                     arrow(draw, color, middleX, startY+15, 0);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15).fill(color);
                 }
                 color = blackHex;//set back to black by default.
             }    
@@ -724,6 +735,7 @@ function drawPathChart(adjacencyList, nodeNum, id, pathObj) {
         }
         line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
         line.stroke({ color: color, width: 1, linecap: 'round' });
+        draw.text(adjacencyList[i][0].gain.toString()).move(arrowXStartCoord+xInterval*i, startY-5).fill(color);
         color = blackHex;
     }
     newX = startX+xInterval*last;
@@ -748,10 +760,12 @@ function drawPathChart(adjacencyList, nodeNum, id, pathObj) {
                     }
                     drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
                     arrow(draw, color, middleX, startY-15);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY-35).fill(color);
                 }
                 else {//points backwards, is a loop.
                     drawPath(draw, nodes[node], nodes[endNode], color);
                     arrow(draw, color, middleX, startY+15, 0);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15).fill(color);
                 }
                 color = blackHex;//set back to black by default.
             }    
@@ -812,7 +826,7 @@ function mergeNonTouchingLoopSets(loopSet1, loopSet2) {
 function drawFullChart(adjacencyList, nodeNum, id) {
     let startX = 5;
     let startY = 40;
-    let color = blackHex;//ffcccc
+    let color = blackHex;
     let diameter = 5;
     let plotXWidth = 300;
     let yLineCorrection = 2.5;
@@ -820,12 +834,13 @@ function drawFullChart(adjacencyList, nodeNum, id) {
     let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
     let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
     var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
-    let nodes = [], newX;
+    let nodes = [], newX, temp;
     for (let i=0; i<last; i++) {
         newX = startX+xInterval*i;
         nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
         draw.circle(diameter).fill(color).move(newX, startY);
         arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
+        draw.text(adjacencyList[i][0].gain.toString()).move(arrowXStartCoord+xInterval*i, startY-5);
     }
     newX = startX+xInterval*last;
     nodes.push([newX+2, startY]);//[x, y] coordinates.
@@ -845,12 +860,14 @@ function drawFullChart(adjacencyList, nodeNum, id) {
                     arrow(draw, color, middleX, startY+15);*/
                     drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
                     arrow(draw, color, middleX, startY-15);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY-35);
                 }
                 else {//points backwards, is a loop.
                     /*drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
                     arrow(draw, color, middleX, startY-15, 0);*/
                     drawPath(draw, nodes[node], nodes[endNode], color);
                     arrow(draw, color, middleX, startY+15, 0);
+                    draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15);
                 }
             }    
         }
