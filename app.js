@@ -109,7 +109,7 @@ function getLoopGain(toNode, from, adjacencyList) {
         adjItemLen = adjItem.length;
         for (let i=0; i<adjItemLen; i++) {
             if (adjItem[i].endNode == (currentNode+1)) {
-                gain *= adjItem[i].gain;
+                gain = gain.multiply(adjItem[i].gain);
                 break;
             }
         }
@@ -132,7 +132,7 @@ function getNodesFromTable() {
         from = parseInt(rows[i].children[1].children[0].value);
         to = parseInt(rows[i].children[2].children[0].value);
         gain = parseInt(rows[i].children[3].children[0].value);
-        fileStr = `0 ${from} ${to} ${gain}`;
+        fileStr = `0 ${from} ${to} ${gain.toString()}`;
         //data.push({from: from.toString(), to:to.toString()});
     }
     while (to == from + 1 && rows[i]) {//while from's are consecutive, add nodes to the graph
@@ -142,7 +142,7 @@ function getNodesFromTable() {
             from = parseInt(rows[i].children[1].children[0].value);
             to = parseInt(rows[i].children[2].children[0].value);
             gain = parseInt(rows[i].children[3].children[0].value);
-            fileStr += `${'\n'}${i-1} ${from} ${to} ${gain}`;
+            fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
         }
     }
     let forwardNodeList = copyObject(nodeList);
@@ -152,7 +152,7 @@ function getNodesFromTable() {
         from = parseInt(rows[i].children[1].children[0].value);//find('from').val();
         to = parseInt(rows[i].children[2].children[0].value);//find('to').val();
         gain = parseInt(rows[i].children[3].children[0].value);
-        fileStr += `${'\n'}${i-1} ${from} ${to} ${gain}`;
+        fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
         nodeList[from].push(new Edge(to, gain));
         if (to > from) {//edge is forward, add to forwardNodeList
             forwardNodeList[from].push(new Edge(to, gain));//faster to copy or make your own?
@@ -166,7 +166,7 @@ function getNodesFromTable() {
 // forwardAdjacencyList is list of edges pruned of backward edges (loops). 
 function getForwardPaths(forwardAdjacencyList, lastNodeIndex) {
     let pathArr = [];
-    getForwardPath(0, [], 1, forwardAdjacencyList, pathArr, lastNodeIndex);
+    getForwardPath(0, [], nerdamer('1'), forwardAdjacencyList, pathArr, lastNodeIndex);
     return pathArr;
 }
 //use this on edge adjacencyList that has been pruned of loops to find forward paths. 
@@ -180,9 +180,10 @@ function getForwardPath(index, path, gain, adjacencyList, pathArr, lastNodeIndex
     let forwardEdgesNum = forwardEdges.length;
     for (let i=0; i<forwardEdgesNum; i++) {
         edge = forwardEdges[i];
-        getForwardPath(edge.endNode, copyObject(path), gain*edge.gain, adjacencyList, pathArr, lastNodeIndex);
+        getForwardPath(edge.endNode, copyObject(path), gain.multiply(edge.gain), adjacencyList, pathArr, lastNodeIndex);
     }
 }
+//gets nodes & edges from file. store gains as nerdamer objects so can do arithmetic.
 function getNodesFromFile() {
     masonsGainPage.fileStr = masonsGainPage.inputTarget.value;
     //string for contents of output file will be file that is uploaded if nodes are retreived from the file.
@@ -194,31 +195,31 @@ function getNodesFromFile() {
         rowNum = rows.length;
     }
     for (let i=0; i<rowNum; i++) {
-        rows[i] = rows[i].split(' ').map(n => parseInt(n));//replace string with list of numbers.
+        rows[i] = rows[i].split(' ');//.map(n => parseInt(n));//replace string with list of numbers.
     }
     let i=0;
     if (rows[i]) {//first one.
-        from = rows[i][1];
-        to = rows[i][2];
-        gain = rows[i][2];
+        from = parseInt(rows[i][1]);
+        to = parseInt(rows[i][2]);
+        gain = nerdamer(rows[i][3]);
         //data.push({from: from.toString(), to:to.toString()});
     }
     while (to == from + 1 && rows[i]) {//while from's are consecutive, add nodes to the graph
         nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
         i++;
         if (rows[i]) {
-            from = rows[i][1];
-            to = rows[i][2];
-            gain = rows[i][3];
+            from = parseInt(rows[i][1]);
+            to = parseInt(rows[i][2]);
+            gain = nerdamer(rows[i][3]);
         }
     }
     let forwardNodeList = copyObject(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
     //let nodeNum = data.length;
     for (; i<rowNum; i++) {//get the edges connecting nonconsecutive nodes.
-        from = rows[i][1];
-        to = rows[i][2];
-        gain = rows[i][3];
+        from = parseInt(rows[i][1]);
+        to = parseInt(rows[i][2]);
+        gain = nerdamer(rows[i][3]);
         nodeList[from].push(new Edge(to, gain));
         if (to > from) {//edge is forward, add to forwardNodeList
             forwardNodeList[from].push(new Edge(to, gain));//faster to copy or make your own?
@@ -266,13 +267,13 @@ function onSubmit() {//should we call this main()?
     //arrange so only loop through this once.
     masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
     if (masonsGainPage.numeratorStr.indexOf('+') > -1) {//more than 1 element.
-        masonsGainPage.numeratorStr += ` = ${masonsGainPage.numerator}$$`;
+        masonsGainPage.numeratorStr += ` = ${masonsGainPage.numerator.toString()}$$`;
     }
     else {
         masonsGainPage.numeratorStr += `$$`;
     }
-    masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant}`;
-    masonsGainPage.finalGain = masonsGainPage.numerator/masonsGainPage.determinant;
+    masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant.toString()}`;
+    masonsGainPage.finalGain = masonsGainPage.numerator.divide(masonsGainPage.determinant);
     
     //erase graphs from last time.
     masonsGainPage.loopGraphs.innerHTML = '';
@@ -284,7 +285,7 @@ function onSubmit() {//should we call this main()?
     let nodeNum = nodeList.length+1;
 
     drawFullChart(nodeList, nodeNum, 'signalFlowGraph');
-    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: ${masonsGainPage.finalGain}`;
+    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: ${masonsGainPage.finalGain.toString()}`;
     masonsGainPage.signalFlowGraph.scrollIntoView();
     let loopNum = loops.length;
     let pathNum = pathArr.length, bgColor;
@@ -294,7 +295,6 @@ function onSubmit() {//should we call this main()?
     let yCaption = `<div class="halfWidthEach"><div class="math"><div class="left">$$y_\\text{in}:$$</div></div><div></div></div><br>`;
     masonsGainPage.determinantDesc.innerHTML = yCaption+masonsGainPage.denominatorDesc+masonsGainPage.denominatorStr;
     masonsGainPage.numeratorHTML.innerHTML = `$$y_\\text{out}:$$` + masonsGainPage.numeratorDesc+masonsGainPage.numeratorStr;
-    //MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
     MathJax.typeset();//see if works when change it, otherwise would need promise.
     if (loopNum > 0) {
         for (let i=0; i<loopNum; i++) {
@@ -305,7 +305,7 @@ function onSubmit() {//should we call this main()?
                 bgColor = loopBackGround1;
             }
             masonsGainPage.loopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
-            <p>Loop ${i} Gain: ${loops[i].gain}</p><div id='loop${i}'></div></div>`);
+            <p>Loop ${i} Gain: ${loops[i].gain.toString()}</p><div id='loop${i}'></div></div>`);
             drawLoopChart(nodeList, nodeNum, `loop${i}`, loops[i]);
         }
         for (let i=loopNum%2; i<nonTouchingLoops.length; i++) {
@@ -316,7 +316,8 @@ function onSubmit() {//should we call this main()?
                 bgColor = loopBackGround1;
             }
             masonsGainPage.nonTouchingLoopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
-            <p>${nonTouchingLoops[i].length} Loops in Non-Touching Loops Set #${i} Gain: ${nonTouchingLoops[i].gain}</p><div id='nonTouchingLoop${i}'></div></div>`);
+            <p>${nonTouchingLoops[i].length} Loops in Non-Touching Loops Set #${i} Gain: ${nonTouchingLoops[i].gain.toString()}</p>
+            <div id='nonTouchingLoop${i}'></div></div>`);
             drawNonTouchingLoopSetChart(nodeList, nodeNum, `nonTouchingLoop${i}`, nonTouchingLoops[i].loops);
         }
     }
@@ -329,19 +330,16 @@ function onSubmit() {//should we call this main()?
                 bgColor = pathBackGround2;
             }
             masonsGainPage.pathGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
-            <p>Forward Path ${i} Gain: ${pathArr[i].gain}</p><div id='path${i}'></div></div>`);
+            <p>Forward Path ${i} Gain: ${pathArr[i].gain.toString()}</p><div id='path${i}'></div></div>`);
             drawPathChart(nodeList, nodeNum, `path${i}`, pathArr[i]);
         }
     }
-    console.log(mergeSortNonTouchingLoopSet([{to:9}, {to:5}, {to:3}, {to:1}, {to:7}]));
-    //console.log(mergeNonTouchingLoopSets([{to:1}, {to:4}], [{to:2}, {to:3}, {to:5}]));
-    //1, 3, 5, 7, 9
 }
 //only pass in list of forward paths.
 function getMasonsNumerator(loops, paths) {
     let pathsNum = paths.length;
     let loopNum = loops.length;
-    let loopsPruned, numerator = 0, detComponet, sumNum;
+    let loopsPruned, numerator = nerdamer('0'), detComponet, sumNum;
     for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {
         loopsPruned = [];
         for (let loopIndex = 0; loopIndex < loopNum; loopIndex++) {
@@ -352,15 +350,15 @@ function getMasonsNumerator(loops, paths) {
             }
         }
         paths[pathIndex].determinant = getDeterminant(loopsPruned);
-        detComponet = paths[pathIndex].determinant*paths[pathIndex].gain; 
-        numerator += detComponet;
+        detComponet = paths[pathIndex].determinant.multiply(paths[pathIndex].gain); 
+        numerator = numerator.add(detComponet);
         sumNum = pathIndex+1;
-        masonsGainPage.numeratorDesc += `$$G_${sumNum} \\Delta _${sumNum} = ${paths[pathIndex].gain}\\cdot${paths[pathIndex].determinant}$$<br>`;
+        masonsGainPage.numeratorDesc += `$$G_${sumNum} \\Delta _${sumNum} = ${paths[pathIndex].gain.toString()}\\cdot${paths[pathIndex].determinant.toString()}$$<br>`;
         if (!pathIndex) {//don't want the first one to have a + out front.
-            masonsGainPage.numeratorStr += ` ${detComponet}`;
+            masonsGainPage.numeratorStr += ` ${detComponet.toString()}`;
         }
         else {
-            masonsGainPage.numeratorStr += `+ ${detComponet}`;
+            masonsGainPage.numeratorStr += `+ ${detComponet.toString()}`;
         }
     }
     return numerator;
@@ -413,28 +411,28 @@ function getLoops (nodeList) {
 //calculate determinant using an array of loops.
 //assume at least one loop. 
 function getDeterminant (loops, makeNonTouchingLoopsList) {
-    let determinant = 1, loopNum = loops.length, det, detComponet;
+    let determinant = nerdamer('1'), loopNum = loops.length, det, detComponet;
     //gains of individual loops
     let set, sets, label = ``;
     //for (let i=loopNum; i>0; i--) {//5, 4, 3, 2, 1, etc. 
     for (let i=1; i<=loopNum; i++) {//1, 2, 3, 4, 5
         sets = getSetsOfCombinations(loops, i);
-        detComponet = 0;
+        detComponet = nerdamer('0');
         for (let j=0; j<sets.length; j++) {//loop through sets and add to determinant if x sharing.
             set = sets[j];
             det = getNLoopsGain(set, set.length, makeNonTouchingLoopsList);
-            determinant += det;
-            detComponet += det;
+            determinant = determinant.add(det);
+            detComponet = detComponet.add(det);//should we do mult instead?
         }
         if (!detComponet) {//once one componet = 0, all the rest will also = 0.
             break;
         }
         if (makeNonTouchingLoopsList) {
-            masonsGainPage.denominatorStr += `+ ${detComponet}`;
+            masonsGainPage.denominatorStr += `+ ${detComponet.toString()}`;
             for (let j=0; j<i; j++) {
                 label+=`L<sub>${masonsGainPage.loopLabels[j]}</sub>`;
             }
-            masonsGainPage.denominatorDesc += `&sum; ${label}: ${detComponet}<br>`;
+            masonsGainPage.denominatorDesc += `&sum; ${label}: ${detComponet.toString()}<br>`;
             label = ``;
         }
     }
@@ -442,7 +440,7 @@ function getDeterminant (loops, makeNonTouchingLoopsList) {
 }
 //get gain contribution for a specific set of non-touching loops.
 function getNLoopsGain(loops, loopNum, makeNonTouchingLoopsList) {
-    let gainComponet = 1;
+    let gainComponet = nerdamer('1');
     let j;
     //try to find if any loops share a node:
     if (loopNum > 1) {
@@ -455,16 +453,17 @@ function getNLoopsGain(loops, loopNum, makeNonTouchingLoopsList) {
                 j++;//forgot this in a dumb mistake.
             }
             //multipy loop gains together to get gain componet.
-            gainComponet *= loops[i].gain;
+            gainComponet = loops[i].gain.multiply(gainComponet);
         }
         if (makeNonTouchingLoopsList) {//find out if is a more efficient way of doing this.
-            masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainComponet));//if loops don't touch, push them.     
+            masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainComponet));
+            //if loops don't touch, push them. does this fail to include the sign? should it?
         }
     }
     else {
         gainComponet = loops[0].gain;
     }
-    return gainComponet*Math.pow(-1, loopNum);
+    return gainComponet.multiply(Math.pow(-1, loopNum).toString());
 }
 //returns 1 if they share a node, else returns 0.
 //shouldn't be able to share an edge w/o sharing a node.
@@ -573,8 +572,6 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
             arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);
             color = blackHex;
         }
-        /*draw.circle(diameter).fill(color).move(newX, startY);
-        arrow(draw, color, arrowXStartCoord+xInterval*i, startY+yLineCorrection);*/
         line = draw.line(nodes[i][0], startY+yLineCorrection, startX+xInterval*(i+1)+2, startY+yLineCorrection);
         line.stroke({ color: color, width: 1, linecap: 'round' });
         color = blackHex;
@@ -593,16 +590,16 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
             for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
                 endNode = adjacencyList[node][adjItemIndex].endNode;
                 middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
-                if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
-                    drawPath(draw, nodes[node], nodes[endNode], color);
-                    arrow(draw, color, middleX, startY+15);
+                if (node < endNode) {//path, points forward.
+                    drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15);
                 }
                 else {//points backwards, is a loop.
                     if (node == loop.from && endNode == loop.to) {
                         color = pinkHex;
                     }
-                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
-                    arrow(draw, color, middleX, startY-15, 0);
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15, 0);
                 }
                 color = blackHex;//set back to black by default.
             }    
@@ -672,9 +669,9 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
             for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
                 endNode = adjacencyList[node][adjItemIndex].endNode;
                 middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
-                if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
-                    drawPath(draw, nodes[node], nodes[endNode], color);
-                    arrow(draw, color, middleX, startY+15);
+                if (node < endNode) {//points forwards, is forward path edge
+                    drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15);
                 }
                 else {//points backwards, is a loop.
                     if (loop) {
@@ -684,8 +681,8 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
                             loop = loopSet[loopIndex];
                         }
                     }
-                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
-                    arrow(draw, color, middleX, startY-15, 0);
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15, 0);
                 }
                 color = blackHex;//set back to black by default.
             }    
@@ -749,12 +746,12 @@ function drawPathChart(adjacencyList, nodeNum, id, pathObj) {
                     if (firstNodeIndex > -1 && secondNodeIndex > -1 && firstNodeIndex+1 == secondNodeIndex) {
                         color = pinkHex;
                     }
-                    drawPath(draw, nodes[node], nodes[endNode], color);
-                    arrow(draw, color, middleX, startY+15);
+                    drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15);
                 }
                 else {//points backwards, is a loop.
-                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
-                    arrow(draw, color, middleX, startY-15, 0);
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15, 0);
                 }
                 color = blackHex;//set back to black by default.
             }    
@@ -844,12 +841,16 @@ function drawFullChart(adjacencyList, nodeNum, id) {
                 endNode = adjacencyList[node][adjItemIndex].endNode;
                 middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
                 if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
-                    drawPath(draw, nodes[node], nodes[endNode], color);
-                    arrow(draw, color, middleX, startY+15);
+                    /*drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15);*/
+                    drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15);
                 }
                 else {//points backwards, is a loop.
-                    drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
-                    arrow(draw, color, middleX, startY-15, 0);
+                    /*drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
+                    arrow(draw, color, middleX, startY-15, 0);*/
+                    drawPath(draw, nodes[node], nodes[endNode], color);
+                    arrow(draw, color, middleX, startY+15, 0);
                 }
             }    
         }
