@@ -1,53 +1,39 @@
+/* only will use one instance, which will be global.
+we will use it to keep track of dom elements and store values that we want to access in the console
+after the code has run. */
 class Page {
     constructor() {
         this.fileSubmit = document.querySelector('#fileSubmit');
         this.tableSubmit = document.querySelector('#tableSubmit');
         this.inputTarget = document.querySelector('#content-target');
+        this.loopGraphs = document.getElementById('loopGraphs');
+        this.nonTouchingLoopGraphs = document.getElementById('nonTouchingLoopGraphs');
+        this.pathGraphs = document.getElementById('forwardPathGraphs');
+        this.pathDesc = document.getElementById('totalGraphDesc');
+        this.signalFlowGraph = document.getElementById('signalFlowGraph');
+        this.determinantDesc = document.getElementById('determinantStr');
+        this.numeratorHTML = document.getElementById('numeratorStr');
+        this.page = document.getElementById('table');
     }
 }
-class Node {
-    constructor (value) {
-        this.value = value;
-        this.next = null;
-        this.visited = 0;
-    }
-};
-class Stack {
-    constructor (value) {
-        this.head = new Node(value);
-    }
-    pop() {
-        let value;
-        if (this.head) {
-            value = this.head.value;
-            this.head = this.head.next;
-        } else {
-            value = undefined;
-        }
-        return value;
-    }
-    push(value) {
-        let newHead = new Node(value);
-        newHead.next = this.head;
-        this.head = newHead;
-    }
-    peek() {
-        return (this.head ? this.head.value : undefined);
-    }
-};
+//Edge objects will be stored in an adjacency list nodeList describing the signal flow graph.
+//an item nodeList[i] will be a list of the edges starting at i.
 class Edge {
     constructor(endNode, gain) {
-        this.endNode = endNode;
-        this.gain = gain;
+        this.endNode = endNode;//graph node where edge ends.
+        this.gain = gain;//edge's gain
     }
 };
-class Loop {
-    constructor (from, toNode, adjacencyList) {
+/* store loop with the # of the highest-numbered node as from & the
+# of the lowest-numbered node as to. */
+class Loop {//new Loop(i, nodeList[i][j], nodeList)
+    constructor (from, to, gain, path) {
         this.from = from;
-        this.to = toNode.endNode;
-        this.gain = getLoopGain(toNode, from, adjacencyList);
-    }
-    isTouchingPath(path) {//takes array of nodes in path
+        this.to = to;
+        this.gain = gain;
+        this.path = path;
+    }//get rid of getLoopGain()
+    isTouchingPath(path) {//takes array of nodes in path, returns true if the path touches the loop.
         for (let i=this.to; i<=this.from; i++) {
             if (path.indexOf(i) > -1) {
                 return 1;
@@ -56,30 +42,24 @@ class Loop {
         return 0;
     }
 };
-class LoopCollection {//collection of loops (non-touching.)
-    constructor (loops, gain, determinant) {
+//collection of loops (for our purposes they will be non-touching.)
+class LoopCollection {
+    constructor (loops, gain) {
         this.loops = loops;
         this.gain = gain;
         this.length = loops.length;
     }
 }
-
-let table, rowIndex = 0, nodeList = [], nodeGraph = [], masonsGainPage;
+//should probably stop nodeList from being a global variable. 
+let table, rowIndex = 0, nodeGraph = [], masonsGainPage;
 let blackHex = '#000', pinkHex = '#e75480 ';//'#ffc0cb';
+//called when html body loads. 
 function onBodyLoad() {
-    /*let draw = SVG().addTo('body').size(300, 300);
-    let rect = draw.rect(100, 100).attr({fill: '#f06'})*/
-    table = document.getElementById('table');
-    masonsGainPage = new Page();//might add table to page
-    masonsGainPage.loopGraphs = document.getElementById('loopGraphs');
-    masonsGainPage.nonTouchingLoopGraphs = document.getElementById('nonTouchingLoopGraphs');
-    masonsGainPage.pathGraphs = document.getElementById('forwardPathGraphs');
-    masonsGainPage.pathDesc = document.getElementById('totalGraphDesc');
-    masonsGainPage.signalFlowGraph = document.getElementById('signalFlowGraph');
-    masonsGainPage.determinantDesc = document.getElementById('determinantStr');
-    masonsGainPage.numeratorHTML = document.getElementById('numeratorStr');
+    masonsGainPage = new Page();
     document.getElementById('fileInput').addEventListener('change', fileHandler);
 }
+//this function handles loading a file from a user's computer & displaying it in an element
+//stored in masonsGainPage.inputTarget. 
 function fileHandler(event) {
     const input = event.target;//div that triggered the event. 
     if ('files' in input && input.files.length > 0) {
@@ -97,13 +77,16 @@ function fileHandler(event) {
     }
 }
 
+//return the gain of a loop from node # 'from' to node # 'to'
 function getLoopGain(toNode, from, adjacencyList) {
     let adjItem = adjacencyList[from], adjItemLen = adjacencyList[from].length, 
     gain = toNode.gain, to = toNode.endNode;
     let adjLen = adjacencyList.length, currentNode = to;
     //loop through adjacency list starting at 'to', 
-    //find gain of all edges between 'to' and 'from' besides the backwards one
-    //by default, 'gain' is set to gain of backwards edge. 
+    //find gain of all edges between 'to' and 'from' besides the one that points backwards
+    //from 'from' to 'to'. 
+    //by default, 'gain' is set to gain of that backwards edge. 
+    /* could we just use index 0 for this loop?*/
     for (let adjIndex=to; adjIndex<adjLen; adjIndex++) {
         adjItem = adjacencyList[adjIndex];
         adjItemLen = adjItem.length;
@@ -122,60 +105,64 @@ function getLoopGain(toNode, from, adjacencyList) {
     }
     return gain;
 }
-
-function getNodesFromTable() {
-    let rows = document.getElementById('table').rows;
-    let rowNum = rows.length, from, to, gain, data = [],
-    nodeList = [];//used to include an empty one for indecies.
-    let i=1, fileStr;//start i at 0 instead of 1?
+//gets list of edges from a table & assigns them to an adjacency list.
+//creates seperate adjacency list of only the edges with a forward direction.
+function getEdgesFromTable() {
+    let rows = masonsGainPage.table.rows;
+    let rowNum = rows.length, from, to, gain;
+    nodeList = [];//reset nodeList to nothing. 
+    let i=1, fileStr;//row #0 has the table titles, which we don't want.
     if (rows[i]) {//first one.
         from = parseInt(rows[i].children[1].children[0].value);
         to = parseInt(rows[i].children[2].children[0].value);
-        gain = parseInt(rows[i].children[3].children[0].value);
+        gain = nerdamer(rows[i].children[3].children[0].value);
         fileStr = `0 ${from} ${to} ${gain.toString()}`;
-        //data.push({from: from.toString(), to:to.toString()});
     }
-    while (to == from + 1 && rows[i]) {//while from's are consecutive, add nodes to the graph
+    //while from's are consecutive, add edges to the graph
+    while (to == from + 1 && rows[i]) {
         nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
         i++;
         if (rows[i]) {
             from = parseInt(rows[i].children[1].children[0].value);
             to = parseInt(rows[i].children[2].children[0].value);
-            gain = parseInt(rows[i].children[3].children[0].value);
+            gain = nerdamer(rows[i].children[3].children[0].value);
             fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
         }
     }
-    let forwardNodeList = copyObject(nodeList);
+    let forwardNodeList = copyObjectJQuery(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
-    //let nodeNum = data.length;
-    for (; i<rowNum; i++) {//get the rest.
-        from = parseInt(rows[i].children[1].children[0].value);//find('from').val();
-        to = parseInt(rows[i].children[2].children[0].value);//find('to').val();
-        gain = parseInt(rows[i].children[3].children[0].value);
+    for (; i<rowNum; i++) {//get the edges between non-consecutive nodes..
+        from = parseInt(rows[i].children[1].children[0].value);
+        to = parseInt(rows[i].children[2].children[0].value);
+        gain = nerdamer(rows[i].children[3].children[0].value);
         fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
         nodeList[from].push(new Edge(to, gain));
-        if (to > from) {//edge is forward, add to forwardNodeList
-            forwardNodeList[from].push(new Edge(to, gain));//faster to copy or make your own?
-        }//copyObject(nodeList[from][nodeList[from].length-1])
-        //data.push({from: from.toString(), to:to.toString()});
+        if (to > from) {//if edge is pointing forward/rightward, add to forwardNodeList
+            forwardNodeList[from].push(new Edge(to, gain));
+        }
     }
     masonsGainPage.fileStr = fileStr;
     return [nodeList, forwardNodeList, lastNodeIndex];
 }
 //uses a recursive function getForwardPath() to get the array of forward paths.
-// forwardAdjacencyList is list of edges pruned of backward edges (loops). 
+//forwardAdjacencyList is an adjacency list of the edges pointing forwards/rightwards.
 function getForwardPaths(forwardAdjacencyList, lastNodeIndex) {
     let pathArr = [];
     getForwardPath(0, [], nerdamer('1'), forwardAdjacencyList, pathArr, lastNodeIndex);
     return pathArr;
 }
-//use this on edge adjacencyList that has been pruned of loops to find forward paths. 
+//use this recursive function on edge adjacencyList without loops to find forward paths.
+//gain function keeps track of the path's gain; for each new index we add to a path we multiply
+//the gain of the edge between that new index and the last one by the current 'gain' value.
 function getForwardPath(index, path, gain, adjacencyList, pathArr, lastNodeIndex) {
-    path.push(index);
+    path.push(index);//add current index in adjacencyList to forward path
     if (index == lastNodeIndex) {//base case, we got to the end of the node.
+        //path & its gain are added to an array of paths. determinant will be calculated later. 
         pathArr.push({path: path, gain: gain, len: path.length, determinant: 0});
         return;
     }
+    //call function for every edge connected to node # 'index' in adjacencyList.
+    //pass a copy of the path so pathArr will eventually have every path. 
     let edge, forwardEdges = adjacencyList[index];
     let forwardEdgesNum = forwardEdges.length;
     for (let i=0; i<forwardEdgesNum; i++) {
@@ -183,28 +170,39 @@ function getForwardPath(index, path, gain, adjacencyList, pathArr, lastNodeIndex
         getForwardPath(edge.endNode, copy1DArr(path), gain.multiply(edge.gain), adjacencyList, pathArr, lastNodeIndex);
     }
 }
-//gets nodes & edges from file. store gains as nerdamer objects so can do arithmetic.
-function getNodesFromFile() {
+//add loops between to & from in adjacencyList to loopList.
+//adjacencyList doesn't have loops.
+function addLoops(to, from, backwardGain, adjacencyList, loopList) {
+    let pathArr = [], pathArrLen;
+    getForwardPath(to, [], nerdamer('1'), adjacencyList, pathArr, from);
+    pathArrLen = pathArr.length;
+    for (let i=0; i<pathArrLen; i++) {
+        loopList.push(new Loop(from, to, pathArr[i].gain.multiply(backwardGain), pathArr[i].path));
+    }
+}
+//gets edges from file & stores them in an adjacency list. stores gains as nerdamer objects for symbolic arithmetic.
+function getEdgesFromFile() {
     masonsGainPage.fileStr = masonsGainPage.inputTarget.value;
-    //string for contents of output file will be file that is uploaded if nodes are retreived from the file.
+    //fileStr: string of file content given by user. 
     let rows = masonsGainPage.inputTarget.value.split('\n');
     let rowNum = rows.length;
     let from, to, gain, nodeList = [];
-    if (rows[rowNum-1].length == '' || rows[rowNum-1].length == ' ') {//take care of extra enter sign if it exists. 
+    //if there is an empty space at the end of the file, remove it from rows.
+    if (rows[rowNum-1].length == '' || rows[rowNum-1].length == ' ') { 
         rows.pop();
         rowNum = rows.length;
     }
     for (let i=0; i<rowNum; i++) {
-        rows[i] = rows[i].split(' ');//.map(n => parseInt(n));//replace string with list of numbers.
+        rows[i] = rows[i].split(' ');//numbers are separated by a space. 
     }
     let i=0;
-    if (rows[i]) {//first one.
+    //while numbers in 'from' category are apart by 1, add nodes to the graph
+    if (rows[i]) {
         from = parseInt(rows[i][1]);
         to = parseInt(rows[i][2]);
         gain = nerdamer(rows[i][3]);
-        //data.push({from: from.toString(), to:to.toString()});
     }
-    while (to == from + 1 && rows[i]) {//while from's are consecutive, add nodes to the graph
+    while (to == from + 1 && rows[i]) {
         nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
         i++;
         if (rows[i]) {
@@ -213,24 +211,28 @@ function getNodesFromFile() {
             gain = nerdamer(rows[i][3]);
         }
     }
-    let forwardNodeList = copyObject(nodeList);
+    let forwardNodeList = copyObjectJQuery(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
-    //let nodeNum = data.length;
-    for (; i<rowNum; i++) {//get the edges connecting nonconsecutive nodes.
+    //get the edges nonconsecutive nodes not right next to each other.
+    for (; i<rowNum; i++) {
         from = parseInt(rows[i][1]);
         to = parseInt(rows[i][2]);
         gain = nerdamer(rows[i][3]);
         nodeList[from].push(new Edge(to, gain));
-        if (to > from) {//edge is forward, add to forwardNodeList
-            forwardNodeList[from].push(new Edge(to, gain));//faster to copy or make your own?
-        }//copyObject(nodeList[from][nodeList[from].length-1])
+        if (to > from) {//if edge points forward/rightward, add to forwardNodeList
+            forwardNodeList[from].push(new Edge(to, gain));
+        }
     }
     return [nodeList, forwardNodeList, lastNodeIndex];
 }
-function saveFile(content) {
-    var blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+//saves a .txt file with string 'contentStr' to user's computer 
+function saveFile(contentStr) {
+    var blob = new Blob([contentStr], {type: "text/plain;charset=utf-8"});
     saveAs(blob, "graphEdges.txt");
 }
+//when a user clicks 'Submit', this function checks if the variable
+//for the file string exists, and if so calls a function to download a .txt file
+//with that string as its content. 
 function downloadEdgeFile() {
     if (masonsGainPage.fileStr) {
         saveFile(masonsGainPage.fileStr);       
@@ -239,32 +241,35 @@ function downloadEdgeFile() {
         saveFile('');
     }
 }
-function onSubmit() {//should we call this main()?
+//called when user clicks 'Submit'. serves as a 'main' function for the calculation of the 
+//Mason's Gain Formula and its associated plots. 
+function onSubmit() {
     let nodeList, forwardNodeList, lastNodeIndex;
+    //if the user checked a button for the file, get the adjacency list from the file.
+    //otherwise, get it form the table.
+    //one box is checked by default & users cannot leave no boxes unchecked.
     if (masonsGainPage.fileSubmit.checked) {
-        [nodeList, forwardNodeList, lastNodeIndex] = getNodesFromFile();
-    }
-    else if (masonsGainPage.tableSubmit.checked) {
-        [nodeList, forwardNodeList, lastNodeIndex] = getNodesFromTable();
+        [nodeList, forwardNodeList, lastNodeIndex] = getEdgesFromFile();
     }
     else {
-        alert('Submit Either With A File or The Table');
-        return;
+        [nodeList, forwardNodeList, lastNodeIndex] = getEdgesFromTable();
     }
-    let loops = getLoops(nodeList);
-    let pathArr = getForwardPaths(forwardNodeList, lastNodeIndex);
-    //let loopList = getSetsOfCombinations(['a', 'b', 'c', 'd', 'e'], 3);
+    let loops = getLoops(nodeList, forwardNodeList);//get an array of the loops. 
+    let pathArr = getForwardPaths(forwardNodeList, lastNodeIndex);//get an array of the forward paths. 
     masonsGainPage.loops = loops;
     masonsGainPage.nonTouchingLoops = [];//array of sets of non-touching loops.
     let nonTouchingLoops = masonsGainPage.nonTouchingLoops;
     masonsGainPage.numeratorStr = `$$\\sum_{k=1}^N  {G_k \\Delta _k} = `;
     masonsGainPage.numeratorDesc = ``;
     masonsGainPage.denominatorDesc = ``;
-    masonsGainPage.denominatorStr = `&Delta; = 1 `;
-    masonsGainPage.loopLabels = 'ijklmnopqrstuvwxyzabcdefghIGKLMNOPQRSTUVWXYZABCDEF';//might need to include a check. 
+    masonsGainPage.denominatorStr = `$$\\Delta = 1 `;
+    //subscripts for loops in determinant formula: 
+    masonsGainPage.loopLabels = 'ijklmnopqrstuvwxyzabcdefghIGKLMNOPQRSTUVWXYZABCDEF';
+    //get determinant in denominator, delta symbol
     masonsGainPage.determinant = getDeterminant(loops, 1);
     masonsGainPage.forwardPaths = pathArr;
     //arrange so only loop through this once.
+    //calculate numerator solution in formula. numeratorStr contains a string of the sum of the componets. 
     masonsGainPage.numerator = getMasonsNumerator(loops, masonsGainPage.forwardPaths);
     if (masonsGainPage.numeratorStr.indexOf('+') > -1) {//more than 1 element.
         masonsGainPage.numeratorStr += ` = ${masonsGainPage.numerator.toString()}$$`;
@@ -272,31 +277,34 @@ function onSubmit() {//should we call this main()?
     else {
         masonsGainPage.numeratorStr += `$$`;
     }
-    masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant.toString()}`;
+    //string of denominator sum
+    masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant.toString()}$$`;
+    //final answer to formula: 
     masonsGainPage.finalGain = masonsGainPage.numerator.divide(masonsGainPage.determinant);
     
+    //rest of onSubmit() draws graphs & updates html. 
     //erase graphs from last time.
     masonsGainPage.loopGraphs.innerHTML = '';
     masonsGainPage.nonTouchingLoopGraphs.innerHTML = '';
     masonsGainPage.pathGraphs.innerHTML = '';
-    masonsGainPage.pathDesc.innerHTML = '';
     masonsGainPage.signalFlowGraph.innerHTML = '';
-
     let nodeNum = nodeList.length+1;
 
+    //signal flow graph without any pink to emphasize one path or loop
     drawFullChart(nodeList, nodeNum, 'signalFlowGraph');
     masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: ${masonsGainPage.finalGain.toString()}`;
     masonsGainPage.signalFlowGraph.scrollIntoView();
     let loopNum = loops.length;
     let pathNum = pathArr.length, bgColor;
     let loopBackGround1 = '#e8f4f8';
-    let pathBackGround1 = '#FFE6EE';//pink //'#f7f7f7';//white smoke
-    let pathBackGround2 = '#FAEBD7';//'#FFFDD0';//cream //'#FFFAFA'//snow
+    let pathBackGround1 = '#FFE6EE';
+    let pathBackGround2 = '#FAEBD7';
     let yCaption = `<div class="halfWidthEach"><div class="math"><div class="left">$$y_\\text{in}:$$</div></div><div></div></div><br>`;
     masonsGainPage.determinantDesc.innerHTML = yCaption+masonsGainPage.denominatorDesc+masonsGainPage.denominatorStr;
     masonsGainPage.numeratorHTML.innerHTML = `$$y_\\text{out}:$$` + masonsGainPage.numeratorDesc+masonsGainPage.numeratorStr;
-    MathJax.typeset();//see if works when change it, otherwise would need promise.
+    MathJax.typeset();//MathJax renders new TeX inputted by html.
     if (loopNum > 0) {
+        //draw chart & show descriptions for each loop
         for (let i=0; i<loopNum; i++) {
             if (i%2) {
                 bgColor = pathBackGround1;
@@ -304,10 +312,12 @@ function onSubmit() {//should we call this main()?
             else {
                 bgColor = loopBackGround1;
             }
+            //insert a discription for a loop.
             masonsGainPage.loopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
             <p>Loop ${i} Gain: ${loops[i].gain.toString()}</p><div id='loop${i}'></div></div>`);
             drawLoopChart(nodeList, nodeNum, `loop${i}`, loops[i]);
         }
+        //draw chart & show descriptions for each collection of non-touching loops.
         for (let i=loopNum%2; i<nonTouchingLoops.length; i++) {
             if (i%2) {
                 bgColor = pathBackGround1;
@@ -322,6 +332,7 @@ function onSubmit() {//should we call this main()?
         }
     }
     if (pathNum > 0) {
+        //draw chart & set description for each forward path.
         for (let i=0; i<pathNum; i++) {
             if (i%2) {
                 bgColor = pathBackGround1;
@@ -335,59 +346,68 @@ function onSubmit() {//should we call this main()?
         }
     }
 }
-//only pass in list of forward paths.
+//pass in list loops & forward paths to get numerator of Mason's Gain Formula.
 function getMasonsNumerator(loops, paths) {
     let pathsNum = paths.length;
     let loopNum = loops.length;
-    let loopsPruned, numerator = nerdamer('0'), detComponet, sumNum;
-    for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {
+    let loopsPruned, numerator = nerdamer('0'), numeratorComponet, sumNum;
+    //for each path, calculate determinant & gain; path determinant only uses loops not touching it.
+    for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {//loop through loops
         loopsPruned = [];
+        //construct list of loops not touching forward path paths[pathIndex]
         for (let loopIndex = 0; loopIndex < loopNum; loopIndex++) {
             if (!loops[loopIndex].isTouchingPath(paths[pathIndex].path)) {
-                //only push to loopsPruned if not touching forward path. 
+                //only push loop to loopsPruned if it doesn't touch forward path. 
                 loopsPruned.push(loops[loopIndex]);
-                //do other stuff to calculate numerator.
             }
         }
-        paths[pathIndex].determinant = getDeterminant(loopsPruned);
-        detComponet = paths[pathIndex].determinant.multiply(paths[pathIndex].gain); 
-        numerator = numerator.add(detComponet);
+        paths[pathIndex].determinant = getDeterminant(loopsPruned);//get determinant of path
+        //path's contribution to numerator will be its determinant * its gain. 
+        numeratorComponet = paths[pathIndex].determinant.multiply(paths[pathIndex].gain); 
+        numerator = numerator.add(numeratorComponet);//add together componets to get total numerator
         sumNum = pathIndex+1;
+        //description of a componet: 
         masonsGainPage.numeratorDesc += `$$G_${sumNum} \\Delta _${sumNum} = ${paths[pathIndex].gain.toString()}\\cdot${paths[pathIndex].determinant.toString()}$$<br>`;
+        //add componets to string showing their sum. 
         if (!pathIndex) {//don't want the first one to have a + out front.
-            masonsGainPage.numeratorStr += ` ${detComponet.toString()}`;
+            masonsGainPage.numeratorStr += ` ${numeratorComponet.toString()}`;
         }
         else {
-            masonsGainPage.numeratorStr += `+ ${detComponet.toString()}`;
+            masonsGainPage.numeratorStr += `+ ${numeratorComponet.toString()}`;
         }
     }
     return numerator;
 }
 /*returns a copy of the object obj.
  If we just assign an object to a variable, the variable gets a reference. 
- Before I used this function, changing the transparency of a term 
- in the topmost plot would also change that of the term in the 'putting it all together' plot*/
-function copyObject(obj) {
-   //return JSON.parse(JSON.stringify(obj));
+ This jquery function does not work on arrays. */
+function copyObjectJQuery (obj) {
    return jQuery.extend(true, {}, obj);
 }
 //copy a 1D array.
 function copy1DArr(arr) {
     return arr.slice();
 }
+//returns list of all possible sets of items in 'list' with length 'setlen'
+//order is irrelevant.
 function getSetsOfCombinations(list, setLen) {
     set = [];
     setOfSets = [];
     getSet(list, set, setLen, 0, 0, setOfSets);
     return setOfSets;
 }
+//recursively finds list of all possible sets of items in 'list' with length 'setTargetLen'
+//and assigns it to 'setOfSets'. listIndex is current index in 'list', setIndex tracks
+//length of 'set'.  
 function getSet(list, set, setTargetLen, setIndex, listIndex, setOfSets) {
-    if (setIndex == setTargetLen) {
+    if (setIndex == setTargetLen) {//when 'set' reaches target length, add it to setOfSets.
         setOfSets.push(set);
     }
     else if (listIndex < list.length) {
-        let newSet = copy1DArr(set);//shouldn't need a deep copy since not changing loop attributes.
+        let newSet = copy1DArr(set);//don't need a deep copy since not changing loop attributes.
         let newElement = list[listIndex];
+        //based on whether setIndex has been incremented in the last call or not, 
+        //choose whether to add the next element in the list to the set
         if (setIndex == set.length) {
             newSet.push(newElement);
         }
@@ -395,49 +415,56 @@ function getSet(list, set, setTargetLen, setIndex, listIndex, setOfSets) {
             newSet[setIndex] = newElement;
         }
         listIndex++;
+        //for each new value in 'list', call getSet twice: 
+        //due to the difference in setIndex,
+        //one call will add the new value to its 'set' & the other won't. 
         getSet(list, newSet, setTargetLen, setIndex, listIndex, setOfSets);
-        //getSet(integers, set, setTargetLen, setIndex, integerIndex);
         setIndex++;
         getSet(list, newSet, setTargetLen, setIndex, listIndex, setOfSets);
     }
 }
 //use adjacency list of nodes to get array of loops
-function getLoops (nodeList) {
+function getLoops (nodeList, forwardNodeList) {
     let loops = [];
     for (let i=0; i<nodeList.length; i++) {//iterate through nodes
         for (let j=0; j<nodeList[i].length; j++) {//iterate through list of edges
             if (nodeList[i][j].endNode < i) {//found edge pointing backwards
-                loops.push(new Loop(i, nodeList[i][j], nodeList));
+                //loops.push(new Loop(i, nodeList[i][j], nodeList));
+                //addLoops(to, from, backwardGain, adjacencyList, loopList)
+                addLoops(nodeList[i][j].endNode, i, nodeList[i][j].gain, forwardNodeList, loops);
             }
         }
     }
     return loops;
 }
-//calculate determinant using an array of loops.
+//calculate determinant of list of loops using an array of loops.
+//makeNonTouchingLoopsList flag tells whether we need to make an list of non-touching loops.
 //assume at least one loop. 
 function getDeterminant (loops, makeNonTouchingLoopsList) {
     let determinant = nerdamer('1'), loopNum = loops.length, det, detComponet;
-    //gains of individual loops
     let set, sets, label = ``;
-    //for (let i=loopNum; i>0; i--) {//5, 4, 3, 2, 1, etc. 
-    for (let i=1; i<=loopNum; i++) {//1, 2, 3, 4, 5
-        sets = getSetsOfCombinations(loops, i);
+    for (let i=1; i<=loopNum; i++) {
+        sets = getSetsOfCombinations(loops, i);//get possible sets of length i
         detComponet = nerdamer('0');
-        for (let j=0; j<sets.length; j++) {//loop through sets and add to determinant if x sharing.
+        for (let j=0; j<sets.length; j++) {
+            //loop through sets and add determinant of set if none of the loops in the set share a node.
             set = sets[j];
             det = getNLoopsGain(set, set.length, makeNonTouchingLoopsList);
-            determinant = determinant.add(det);
-            detComponet = detComponet.add(det);//should we do mult instead?
+            determinant = determinant.add(det);//construct sum of all determinants of all sets of non-touching loops
+            detComponet = detComponet.add(det);//construct sum of determinants of sets of non-touching loops of length i
         }
-        if (!detComponet.symbol.multiplier.num.value) {//once one componet = 0, all the rest will also = 0.
+        if (!detComponet.symbol.multiplier.num.value) {
+            //if one componet = 0, then all componets with sets of length > i will also be zero.
             break;
         }
         if (makeNonTouchingLoopsList) {
+            //add description for the determinant componet to the
+            //strings that will be used to describe denominator in html.
             masonsGainPage.denominatorStr += `+ ${detComponet.toString()}`;
             for (let j=0; j<i; j++) {
-                label+=`L<sub>${masonsGainPage.loopLabels[j]}</sub>`;
-            }
-            masonsGainPage.denominatorDesc += `&sum; ${label}: ${detComponet.toString()}<br>`;
+                label+=`L_${masonsGainPage.loopLabels[j]}`;
+            }//is .replace(/\*/g,"\\cdot") worth the time?
+            masonsGainPage.denominatorDesc += `$$(-1)^i \\cdot \\sum_{} {${label}}: ${detComponet.toString()}$$<br>`;
             label = ``;
         }
     }
@@ -447,59 +474,62 @@ function getDeterminant (loops, makeNonTouchingLoopsList) {
 function getNLoopsGain(loops, loopNum, makeNonTouchingLoopsList) {
     let gainComponet = nerdamer('1');
     let j;
-    //try to find if any loops share a node:
     if (loopNum > 1) {
         for (let i=0; i<loopNum; i++) {
             j = i+1;
             while (j < loopNum) {
+                //if any loops in the collection share a node, contributin is 0 since must be non-touching.
                 if (doLoopsShareANode(loops[i], loops[j])) {
                     return 0;
                 }
-                j++;//forgot this in a dumb mistake.
+                j++;
             }
-            //multipy loop gains together to get gain componet.
+            //multiply loop gains together to get gain componet.
             gainComponet = loops[i].gain.multiply(gainComponet);
         }
-        if (makeNonTouchingLoopsList) {//find out if is a more efficient way of doing this.
+        if (makeNonTouchingLoopsList) {
             masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainComponet));
-            //if loops don't touch, push them. does this fail to include the sign? should it?
+            //if set of loops don't touch, push them to the list of non-touching loops. 
         }
     }
-    else {
+    else {//if only 1 loop, gain componet is that loop's gain.
         gainComponet = loops[0].gain;
     }
+    //gain componet's sign depends on how many loops there are in the collection.
     return gainComponet.multiply(Math.pow(-1, loopNum).toString());
 }
-//returns 1 if they share a node, else returns 0.
-//shouldn't be able to share an edge w/o sharing a node.
-function doLoopsShareANode (loop1, loop2) {
-    for (let i=loop1.to; i<=loop1.from; i++) {
-        if (i <= loop2.from && i >= loop2.to) {
-            return 1;
-        }
+//returns 1 if the loops share a node, else returns 0.
+//can't share an edge w/o sharing a node.
+function doLoopsShareANode (loop1, loop2) {//loop objects as parametrs
+    //if either endpoint of one loop is inside the other loop, then they share a node.
+    if (loop1.to <= loop2.from && loop1.to >= loop2.to) {
+        return 1;
+    }
+    if (loop.from <= loop2.from && loop1.from >= loop.to) {
+        return 1;
     }
     return 0;
 }
-function uncheckFileSubmit() {//uncheckFileSubmit
-    //document.querySelector('#fileSubmit').checked = 0;
+//uncheck radio box saying to submit edge list through a file
+function uncheckFileSubmit() {
     masonsGainPage.fileSubmit.checked = 0;
 }
+//uncheck radio button saying to submit edge list through table
 function uncheckTableSubmit() {//uncheckTableSubmit
-    //document.querySelector('#tableSubmit').checked = 0;
     masonsGainPage.tableSubmit.checked = 0;
 }
+//called when Get Sample button is clicked. creates a sample edge list in the table.
 function getSample() {
-    for (let i=0; i<7; i++) {
+    for (let i=0; i<7; i++) {//add several rows of edges connected to each other.
         addRow();
     }
-    let rows = document.getElementById('table').rows;
+    let rows = masonsGainPage.table.rows;
     let last = rows.length-1;
     rows[last].children[1].children[0].value = 4;
     rows[last].children[2].children[0].value = 2;
     rows[last].children[3].children[0].value = 5;
     rows[2].children[3].children[0].value = 3;
 }
-
 //add empty row to table
 function addRow() {
     let html = `<tr>
@@ -521,7 +551,7 @@ function removeLastRow() {
 //remove the row specified by the index in the input field #rowNum 
 function removeRow() {
     let num = parseInt($('#rowNum').val());
-    let rows = document.getElementById('table').rows;
+    let rows = masonsGainPage.table.rows;
     let len = rows.length;
     for (let i=1; i<len; i++) {
         if (parseInt(rows[i].cells[0].innerHTML) == num) {
@@ -530,7 +560,6 @@ function removeRow() {
         }
     }
 }
-
 //sets table html to default.
 function removeAllRows() {
     $('#table').html(`<tr>
@@ -777,8 +806,8 @@ function mergeSortNonTouchingLoopSet(loopSet) {
     let temp;
     if (loopSet.length == 2) {
         if (loopSet[0].to > loopSet[1].to) {
-            temp = copyObject(loopSet[0]);
-            loopSet[0] = copyObject(loopSet[1]);
+            temp = copyObjectJQuery(loopSet[0]);
+            loopSet[0] = copyObjectJQuery(loopSet[1]);
             loopSet[1] = temp;
             return loopSet;//sort two elements.
         }
