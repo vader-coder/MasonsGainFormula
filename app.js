@@ -319,7 +319,8 @@ function onSubmit() {
 
     //signal flow graph without any pink to emphasize one path or loop
     drawFullChart(nodeList, nodeNum, 'signalFlowGraph');
-    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: ${masonsGainPage.finalGain.toString()}`;
+    //change to show numerator & denominator 
+    masonsGainPage.pathDesc.innerHTML = `$$Total Signal Flow Graph Gain: \\frac{${masonsGainPage.numerator.toString()}}{${masonsGainPage.determinant.toString()}}$$`;
     masonsGainPage.signalFlowGraph.scrollIntoView();
     let loopNum = loops.length;
     let pathNum = pathArr.length, bgColor;
