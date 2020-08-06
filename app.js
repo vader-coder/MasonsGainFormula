@@ -13,7 +13,7 @@ class Page {
         this.signalFlowGraph = document.getElementById('signalFlowGraph');
         this.determinantDesc = document.getElementById('determinantStr');
         this.numeratorHTML = document.getElementById('numeratorStr');
-        this.page = document.getElementById('table');
+        this.table = document.getElementById('table');
     }
 }
 //Edge objects will be stored in an adjacency list nodeList describing the signal flow graph.
