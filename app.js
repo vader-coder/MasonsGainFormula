@@ -109,8 +109,8 @@ function getLoopGain(toNode, from, adjacencyList) {
 //creates seperate adjacency list of only the edges with a forward direction.
 function getEdgesFromTable() {
     let rows = masonsGainPage.table.rows;
-    let rowNum = rows.length, from, to, gain;
-    nodeList = [];//reset nodeList to nothing. 
+    let rowNum = rows.length, from, to, gain,
+    nodeList = [], nodeNum;//reset nodeList to nothing. 
     let i=1, fileStr;//row #0 has the table titles, which we don't want.
     if (rows[i]) {//first one.
         from = parseInt(rows[i].children[1].children[0].value);
@@ -129,20 +129,33 @@ function getEdgesFromTable() {
             fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
         }
     }
+    masonsGainPage.sinkNode = nodeList[nodeList.length-1][0].endNode;
     let forwardNodeList = copyObjectJQuery(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
-    for (; i<rowNum; i++) {//get the edges between non-consecutive nodes..
-        from = parseInt(rows[i].children[1].children[0].value);
-        to = parseInt(rows[i].children[2].children[0].value);
-        gain = nerdamer(rows[i].children[3].children[0].value);
-        fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
-        nodeList[from].push(new Edge(to, gain));
+    while (i<rowNum) {//get the edges between non-consecutive nodes..
+        if (nodeList[from]) {
+            nodeList[from].push(new Edge(to, gain));
+        }
+        else {//otherwise, must be from last node.
+            nodeList.push([new Edge(to, gain)]);
+            nodeNum = nodeList.length;
+        }
         if (to > from) {//if edge is pointing forward/rightward, add to forwardNodeList
             forwardNodeList[from].push(new Edge(to, gain));
         }
+        i++;
+        if (rows[i]) {
+            from = parseInt(rows[i].children[1].children[0].value);
+            to = parseInt(rows[i].children[2].children[0].value);
+            gain = nerdamer(rows[i].children[3].children[0].value);
+            fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
+        }
+    }
+    if (!nodeNum) {
+        nodeNum = nodeList.length+1;
     }
     masonsGainPage.fileStr = fileStr;
-    return [nodeList, forwardNodeList, lastNodeIndex];
+    return [nodeList, forwardNodeList, lastNodeIndex, nodeNum];
 }
 //uses a recursive function getForwardPath() to get the array of forward paths.
 //forwardAdjacencyList is an adjacency list of the edges pointing forwards/rightwards.
@@ -186,7 +199,7 @@ function getEdgesFromFile() {
     //fileStr: string of file content given by user. 
     let rows = masonsGainPage.inputTarget.value.split('\n');
     let rowNum = rows.length;
-    let from, to, gain, nodeList = [];
+    let from, to, gain, nodeList = [], nodeNum;
     //if there is an empty space at the end of the file, remove it from rows.
     if (rows[rowNum-1].length == '' || rows[rowNum-1].length == ' ') { 
         rows.pop();
@@ -211,6 +224,7 @@ function getEdgesFromFile() {
             gain = nerdamer(rows[i][3]);
         }
     }
+    masonsGainPage.sinkNode = nodeList[nodeList.length-1][0].endNode;
     let forwardNodeList = copyObjectJQuery(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
     //get the edges nonconsecutive nodes not right next to each other.
@@ -218,12 +232,21 @@ function getEdgesFromFile() {
         from = parseInt(rows[i][1]);
         to = parseInt(rows[i][2]);
         gain = nerdamer(rows[i][3]);
-        nodeList[from].push(new Edge(to, gain));
+        if (nodeList[from]) {
+            nodeList[from].push(new Edge(to, gain));
+        }
+        else {//otherwise, must be from last node.
+            nodeList.push([new Edge(to, gain)]);
+            nodeNum = nodeList.length;
+        }
         if (to > from) {//if edge points forward/rightward, add to forwardNodeList
             forwardNodeList[from].push(new Edge(to, gain));
         }
     }
-    return [nodeList, forwardNodeList, lastNodeIndex];
+    if (!nodeNum) {
+        nodeNum = nodeList.length+1;
+    }
+    return [nodeList, forwardNodeList, lastNodeIndex, nodeNum];
 }
 //saves a .txt file with string 'contentStr' to user's computer 
 function saveFile(contentStr) {
@@ -244,15 +267,15 @@ function downloadEdgeFile() {
 //called when user clicks 'Submit'. serves as a 'main' function for the calculation of the 
 //Mason's Gain Formula and its associated plots. 
 function onSubmit() {
-    let nodeList, forwardNodeList, lastNodeIndex;
+    let nodeList, forwardNodeList, lastNodeIndex, nodeNum;
     //if the user checked a button for the file, get the adjacency list from the file.
     //otherwise, get it form the table.
     //one box is checked by default & users cannot leave no boxes unchecked.
     if (masonsGainPage.fileSubmit.checked) {
-        [nodeList, forwardNodeList, lastNodeIndex] = getEdgesFromFile();
+        [nodeList, forwardNodeList, lastNodeIndex, nodeNum] = getEdgesFromFile();
     }
     else {
-        [nodeList, forwardNodeList, lastNodeIndex] = getEdgesFromTable();
+        [nodeList, forwardNodeList, lastNodeIndex, nodeNum] = getEdgesFromTable();
     }
     let loops = getLoops(nodeList, forwardNodeList);//get an array of the loops. 
     let pathArr = getForwardPaths(forwardNodeList, lastNodeIndex);//get an array of the forward paths. 
@@ -280,6 +303,11 @@ function onSubmit() {
     //string of denominator sum
     masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant.toString()}$$`;
     //final answer to formula: 
+    if (masonsGainPage.determinant.toString() == "0") {
+        alert("Determinant is 0; cannot divide by 0.");
+        downloadEdgeFile();
+        location.reload();
+    }
     masonsGainPage.finalGain = masonsGainPage.numerator.divide(masonsGainPage.determinant);
     
     //rest of onSubmit() draws graphs & updates html. 
@@ -288,7 +316,6 @@ function onSubmit() {
     masonsGainPage.nonTouchingLoopGraphs.innerHTML = '';
     masonsGainPage.pathGraphs.innerHTML = '';
     masonsGainPage.signalFlowGraph.innerHTML = '';
-    let nodeNum = nodeList.length+1;
 
     //signal flow graph without any pink to emphasize one path or loop
     drawFullChart(nodeList, nodeNum, 'signalFlowGraph');
@@ -505,7 +532,7 @@ function doLoopsShareANode (loop1, loop2) {//loop objects as parametrs
     if (loop1.to <= loop2.from && loop1.to >= loop2.to) {
         return 1;
     }
-    if (loop.from <= loop2.from && loop1.from >= loop.to) {
+    if (loop1.from <= loop2.from && loop1.from >= loop2.to) {
         return 1;
     }
     return 0;
@@ -587,7 +614,7 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
     let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
     let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
     var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
-    let nodes = [], newX, line;
+    let nodes = [], newX, line, sinkNode = masonsGainPage.sinkNode;
     for (let i=0; i<last; i++) {
         newX = startX+xInterval*i;
         nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
@@ -642,6 +669,23 @@ function drawLoopChart(adjacencyList, nodeNum, id, loop) {
             }    
         }
     }
+    let node = adjacencyList.length-1;
+    if (node == sinkNode) {//last one is sink node.
+        edgeListLen = adjacencyList[node].length;
+        for (let adjItemIndex = 0; adjItemIndex < edgeListLen; adjItemIndex++) {
+            endNode = adjacencyList[node][adjItemIndex].endNode;
+            middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+            if (endNode < node) {//forms a loop; since is sink node, no more forward paths.
+                if (node == loop.from && endNode == loop.to) {
+                    color = pinkHex;
+                }
+                drawPath(draw, nodes[node], nodes[endNode], color);
+                arrow(draw, color, middleX, startY+15, 0);
+                draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15);
+            }
+            color = blackHex;
+        }
+    }
 }
 function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
     let startX = 5;
@@ -654,7 +698,7 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
     let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
     let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
     var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
-    let nodes = [], newX, line, loopIndex = 0;
+    let nodes = [], newX, line, loopIndex = 0, sinkNode = masonsGainPage.sinkNode;
     loopSet = mergeSortNonTouchingLoopSet(loopSet);//sort in ascending order w/ merge sort
     //loopSet sorted in ascending .to order. 
     for (let i=0; i<last; i++) {
@@ -726,6 +770,27 @@ function drawNonTouchingLoopSetChart(adjacencyList, nodeNum, id, loopSet) {
                 }
                 color = blackHex;//set back to black by default.
             }    
+        }
+    }
+    let node = adjacencyList.length-1;
+    if (node == sinkNode) {//last one is sink node.
+        edgeListLen = adjacencyList[node].length;
+        for (let adjItemIndex = 0; adjItemIndex < edgeListLen; adjItemIndex++) {
+            endNode = adjacencyList[node][adjItemIndex].endNode;
+            middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+            if (endNode < node) {//forms a loop; since is sink node, no more forward paths.
+                if (loop) {
+                    if (node == loop.from && endNode == loop.to) {
+                        color = pinkHex;
+                        loopIndex++;
+                        loop = loopSet[loopIndex];
+                    }
+                }
+                drawPath(draw, nodes[node], nodes[endNode], color);
+                arrow(draw, color, middleX, startY+15, 0);
+                draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15);
+            }
+            color = blackHex;
         }
     }
 }
@@ -863,7 +928,7 @@ function drawFullChart(adjacencyList, nodeNum, id) {
     let xInterval = parseInt(plotXWidth/nodeNum);//parseInt(plotXWidth/nodeNum)
     let arrowXStartCoord = startX+parseInt(xInterval/2)+4;
     var draw = SVG().addTo('#'+id).size(plotXWidth, 130), last = nodeNum-1;
-    let nodes = [], newX, temp;
+    let nodes = [], newX, sinkNode = masonsGainPage.sinkNode;
     for (let i=0; i<last; i++) {
         newX = startX+xInterval*i;
         nodes.push([newX+2, startY]);//nodes[0] has x & y coordinates for node 0.
@@ -884,21 +949,30 @@ function drawFullChart(adjacencyList, nodeNum, id) {
             for (let adjItemIndex = 1; adjItemIndex < edgeListLen; adjItemIndex++) {
                 endNode = adjacencyList[node][adjItemIndex].endNode;
                 middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
-                if (node < endNode) {//arrow(plot, color = '#000', xCoord, yCoord, pointsRightward = 1)
-                    /*drawPath(draw, nodes[node], nodes[endNode], color);
-                    arrow(draw, color, middleX, startY+15);*/
+                if (node < endNode) {//points forward/rightward.
                     drawPath(draw, nodes[node], nodes[endNode], color, 20, 1);
                     arrow(draw, color, middleX, startY-15);
                     draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY-35);
                 }
                 else {//points backwards, is a loop.
-                    /*drawPath(draw, nodes[endNode], nodes[node], color, 20, 1);
-                    arrow(draw, color, middleX, startY-15, 0);*/
                     drawPath(draw, nodes[node], nodes[endNode], color);
                     arrow(draw, color, middleX, startY+15, 0);
                     draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15);
                 }
             }    
+        }
+    }
+    let node = adjacencyList.length-1;
+    if (node == sinkNode) {//last one is sink node.
+        edgeListLen = adjacencyList[node].length;
+        for (let adjItemIndex = 0; adjItemIndex < edgeListLen; adjItemIndex++) {
+            endNode = adjacencyList[node][adjItemIndex].endNode;
+            middleX = nodes[node][0]+(nodes[endNode][0]-nodes[node][0])/2;
+            if (endNode < node) {//forms a loop; since is sink node, no more forward paths.
+                drawPath(draw, nodes[node], nodes[endNode], color);
+                arrow(draw, color, middleX, startY+15, 0);
+                draw.text(adjacencyList[node][adjItemIndex].gain.toString()).move(middleX-5, startY+15);
+            }
         }
     }
 }
