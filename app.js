@@ -110,7 +110,7 @@ function getLoopGain(toNode, from, adjacencyList) {
 function getEdgesFromTable() {
     let rows = masonsGainPage.table.rows;
     let rowNum = rows.length, from, to, gain,
-    nodeList = [], nodeNum;//reset nodeList to nothing. 
+    nodeList = [], nodeNum, forwardNodeList = [];//reset nodeList to nothing. 
     let i=1, fileStr;//row #0 has the table titles, which we don't want.
     if (rows[i]) {//first one.
         from = parseInt(rows[i].children[1].children[0].value);
@@ -121,6 +121,7 @@ function getEdgesFromTable() {
     //while from's are consecutive, add edges to the graph
     while (to == from + 1 && rows[i]) {
         nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
+        forwardNodeList.push([new Edge(to, gain)]);
         i++;
         if (rows[i]) {
             from = parseInt(rows[i].children[1].children[0].value);
@@ -130,7 +131,6 @@ function getEdgesFromTable() {
         }
     }
     masonsGainPage.sinkNode = nodeList[nodeList.length-1][0].endNode;
-    let forwardNodeList = copyObjectJQuery(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
     while (i<rowNum) {//get the edges between non-consecutive nodes..
         if (nodeList[from]) {
@@ -176,11 +176,13 @@ function getForwardPath(index, path, gain, adjacencyList, pathArr, lastNodeIndex
     }
     //call function for every edge connected to node # 'index' in adjacencyList.
     //pass a copy of the path so pathArr will eventually have every path. 
-    let edge, forwardEdges = adjacencyList[index];
-    let forwardEdgesNum = forwardEdges.length;
-    for (let i=0; i<forwardEdgesNum; i++) {
-        edge = forwardEdges[i];
-        getForwardPath(edge.endNode, copy1DArr(path), gain.multiply(edge.gain), adjacencyList, pathArr, lastNodeIndex);
+    else if (index < lastNodeIndex) {
+        let edge, forwardEdges = adjacencyList[index];
+        let forwardEdgesNum = forwardEdges.length;
+        for (let i=0; i<forwardEdgesNum; i++) {
+            edge = forwardEdges[i];
+            getForwardPath(edge.endNode, copy1DArr(path), gain.multiply(edge.gain), adjacencyList, pathArr, lastNodeIndex);
+        }
     }
 }
 //add loops between to & from in adjacencyList to loopList.
@@ -199,7 +201,7 @@ function getEdgesFromFile() {
     //fileStr: string of file content given by user. 
     let rows = masonsGainPage.inputTarget.value.split('\n');
     let rowNum = rows.length;
-    let from, to, gain, nodeList = [], nodeNum;
+    let from, to, gain, nodeList = [], nodeNum, forwardNodeList = [];
     //if there is an empty space at the end of the file, remove it from rows.
     if (rows[rowNum-1].length == '' || rows[rowNum-1].length == ' ') { 
         rows.pop();
@@ -217,6 +219,7 @@ function getEdgesFromFile() {
     }
     while (to == from + 1 && rows[i]) {
         nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
+        forwardNodeList.push([new Edge(to, gain)]);
         i++;
         if (rows[i]) {
             from = parseInt(rows[i][1]);
@@ -225,7 +228,6 @@ function getEdgesFromFile() {
         }
     }
     masonsGainPage.sinkNode = nodeList[nodeList.length-1][0].endNode;
-    let forwardNodeList = copyObjectJQuery(nodeList);
     let lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
     //get the edges nonconsecutive nodes not right next to each other.
     for (; i<rowNum; i++) {
@@ -302,13 +304,6 @@ function onSubmit() {
     }
     //string of denominator sum
     masonsGainPage.denominatorStr += ` = ${masonsGainPage.determinant.toString()}$$`;
-    //final answer to formula: 
-    if (masonsGainPage.determinant.toString() == "0") {
-        alert("Determinant is 0; cannot divide by 0.");
-        downloadEdgeFile();
-        location.reload();
-    }
-    masonsGainPage.finalGain = masonsGainPage.numerator.divide(masonsGainPage.determinant);
     
     //rest of onSubmit() draws graphs & updates html. 
     //erase graphs from last time.
@@ -492,7 +487,7 @@ function getDeterminant (loops, makeNonTouchingLoopsList) {
             for (let j=0; j<i; j++) {
                 label+=`L_${masonsGainPage.loopLabels[j]}`;
             }//is .replace(/\*/g,"\\cdot") worth the time?
-            masonsGainPage.denominatorDesc += `$$(-1)^i \\cdot \\sum_{} {${label}}: ${detComponet.toString()}$$<br>`;
+            masonsGainPage.denominatorDesc += `$$(-1)^${i} \\cdot \\sum_{} {${label}}: ${detComponet.toString()}$$<br>`;
             label = ``;
         }
     }
