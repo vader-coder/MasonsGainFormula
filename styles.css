@@ -21,3 +21,8 @@ body {
 .left {
     float: left;
 }
+.cytoscapeChart {
+    width: 75vw;
+    height: 75vh;
+    display: block;
+}

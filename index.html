@@ -20,6 +20,7 @@
   <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.5/nerdamer.core.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.5/Algebra.min.js"></script>
   <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.15.2/dist/cytoscape.min.js" integrity="sha256-dB67c4TXRS6fjUDgpC3eu7rK8QOIGgXK7vXHpN5CEI4=" crossorigin="anonymous"></script>
 </head>
 
 <body onload="onBodyLoad()">
@@ -53,7 +54,7 @@
   <input type="button" value="Submit" onclick="onSubmit()"></input><br>
   <input type="button" value="Download File For Current Graph" onclick="downloadEdgeFile()"></input><br>
   <textarea id="content-target"></textarea>
-  
+  <div id="pageLinks"></div>
   <br>The gain formula is as follows:
   <div class="halfWidthEach">
     <div class="math">
@@ -81,7 +82,9 @@
     <a href="https://en.wikipedia.org/wiki/Mason%27s_gain_formula#Formula">Original Ariticle.</a>
   </p></small>
   <p id='totalGraphDesc'></p>
+  <a href='#menu' id='signalFlowGraphLink'>Top Menu</a>
   <div id='signalFlowGraph'></div><br>
+  <div id='generalChart' class="cytoscapeChart"></div><br>
   <div class="halfWidthEach">
     <div class="math">
       <div class="left" id='numeratorStr'></div>
