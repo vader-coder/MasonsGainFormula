@@ -61,6 +61,10 @@ function onBodyLoad() {
 }
 //this function handles loading a file from a user's computer & displaying it in an element
 //stored in masonsGainPage.inputTarget. 
+/* Credit for the code in fileHandler() belongs a StackOverflow, 
+whose publications use a cc-by-sa license.
+Question: https://stackoverflow.com/questions/31746837/reading-uploaded-text-file-contents-in-html
+Answer Author: terales https://stackoverflow.com/users/1363799/terales*/
 function fileHandler(event) {
     const input = event.target;//div that triggered the event. 
     if ('files' in input && input.files.length > 0) {
@@ -114,43 +118,58 @@ function getEdgesFromTable() {
     nodeList = [], nodeNum, forwardNodeList = [], elementsDictionary = [], lastNodeIndex;//reset nodeList to nothing. 
     let i=1, fileStr;//row #0 has the table titles, which we don't want.
     if (rows[i]) {//first one.
-        from = parseInt(rows[i].children[1].children[0].value);
-        to = parseInt(rows[i].children[2].children[0].value);
-        gain = nerdamer(rows[i].children[3].children[0].value);
-        fileStr = `0 ${from} ${to} ${gain.toString()}`;
+        from = parseInt(rows[i].children[0].children[0].value);
+        to = parseInt(rows[i].children[1].children[0].value);
+        gain = nerdamer(rows[i].children[2].children[0].value);
+        fileStr = `${from} ${to} ${gain.toString()}`;
     }
     //while from's are consecutive, add edges to the graph
     while (to == from + 1 && rows[i]) {
-        nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
-        forwardNodeList.push([new Edge(to, gain)]);
+        addEdgeToAdjacencyListDict(nodeList, from, to, gain);//each entry of nodelist contains the list of edges attatched to the node represented by its key.
+        addEdgeToAdjacencyListDict(forwardNodeList, from, to, gain);
         addEdgeToElementsDict(elementsDictionary, `${from}`, `${to}`, `${gain}`, 'straight');
+        if (from > lastNodeIndex) {
+            lastNodeIndex = from;
+        }
+        if (to > lastNodeIndex) {
+            lastNodeIndex = to;
+        }
         i++;
         if (rows[i]) {
-            from = parseInt(rows[i].children[1].children[0].value);
-            to = parseInt(rows[i].children[2].children[0].value);
-            gain = nerdamer(rows[i].children[3].children[0].value);
-            fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
+            from = parseInt(rows[i].children[0].children[0].value);
+            to = parseInt(rows[i].children[1].children[0].value);
+            gain = nerdamer(rows[i].children[2].children[0].value);
+            fileStr += `${'\n'}${from} ${to} ${gain.toString()}`;
         }
     }
     lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
+    let straightOrCurved;
     while (i<rowNum) {//get the edges between non-consecutive nodes..
-        if (nodeList[from]) {
-            nodeList[from].push(new Edge(to, gain));
-        }
-        else {//otherwise, must be from last node.
-            nodeList.push([new Edge(to, gain)]);
+        addEdgeToAdjacencyListDict(nodeList, from, to, gain);
+        if (!nodeList[from]) {//otherwise, must be from last node.
             nodeNum = nodeList.length;
         }
         if (to > from) {//if edge is pointing forward/rightward, add to forwardNodeList
-            forwardNodeList[from].push(new Edge(to, gain));
+            addEdgeToAdjacencyListDict(forwardNodeList, from, to, gain);
         }
-        addEdgeToElementsDict(elementsDictionary, `${from}`, `${to}`, `${gain}`, 'curved');
+        if (to == from+1) {
+            straightOrCurved = 'straight';
+        } else {
+            straightOrCurved = 'curved';
+        }
+        addEdgeToElementsDict(elementsDictionary, `${from}`, `${to}`, `${gain}`, straightOrCurved);
+        if (from > lastNodeIndex) {
+            lastNodeIndex = from;
+        }
+        if (to > lastNodeIndex) {
+            lastNodeIndex = to;
+        }
         i++;
         if (rows[i]) {
-            from = parseInt(rows[i].children[1].children[0].value);
-            to = parseInt(rows[i].children[2].children[0].value);
-            gain = nerdamer(rows[i].children[3].children[0].value);
-            fileStr += `${'\n'}${i-1} ${from} ${to} ${gain.toString()}`;
+            from = parseInt(rows[i].children[0].children[0].value);
+            to = parseInt(rows[i].children[1].children[0].value);
+            gain = nerdamer(rows[i].children[2].children[0].value);
+            fileStr += `${'\n'}${from} ${to} ${gain.toString()}`;
         }
     }
     if (!nodeNum) {
@@ -216,35 +235,33 @@ function getEdgesFromFile() {
     let i=0;
     //while numbers in 'from' category are apart by 1, add nodes to the graph
     if (rows[i]) {
-        from = parseInt(rows[i][1]);
-        to = parseInt(rows[i][2]);
-        gain = nerdamer(rows[i][3]);
+        from = parseInt(rows[i][0]);
+        to = parseInt(rows[i][1]);
+        gain = nerdamer(rows[i][2]);
     }
     while (to == from + 1 && rows[i]) {
-        /*nodeList.push([new Edge(to, gain)]);//each index i of nodelist represents a node #.
-        forwardNodeList.push([new Edge(to, gain)]);*/
         addEdgeToAdjacencyListDict(nodeList, from, to, gain);
         addEdgeToAdjacencyListDict(forwardNodeList, from, to, gain);
-        addEdgeToElementsDict(elementsDictionary, rows[i][1], rows[i][2], rows[i][3], 'straight');
-        lastNodeIndex = to;//hopefully we can get rid of this now.
-        i++;
-        if (rows[i]) {
-            from = parseInt(rows[i][1]);
-            to = parseInt(rows[i][2]);
-            gain = nerdamer(rows[i][3]);
-        }
+        addEdgeToElementsDict(elementsDictionary, rows[i][0], rows[i][1], rows[i][2], 'straight');
         if (from > lastNodeIndex) {
             lastNodeIndex = from;
         }
         if (to > lastNodeIndex) {
             lastNodeIndex = to;
         }
+        i++;
+        if (rows[i]) {
+            from = parseInt(rows[i][0]);
+            to = parseInt(rows[i][1]);
+            gain = nerdamer(rows[i][2]);
+        }
     }
     //get the edges nonconsecutive nodes not right next to each other.
+    let curveClass;
     for (; i<rowNum; i++) {
-        from = parseInt(rows[i][1]);
-        to = parseInt(rows[i][2]);
-        gain = nerdamer(rows[i][3]);
+        from = parseInt(rows[i][0]);
+        to = parseInt(rows[i][1]);
+        gain = nerdamer(rows[i][2]);
         addEdgeToAdjacencyListDict(nodeList, from, to, gain);
         /*if (nodeList[from]) {
             //nodeList[from].push(new Edge(to, gain));
@@ -257,7 +274,14 @@ function getEdgesFromFile() {
             //forwardNodeList[from].push(new Edge(to, gain));
             addEdgeToAdjacencyListDict(forwardNodeList, from, to, gain);
         }
-        addEdgeToElementsDict(elementsDictionary, rows[i][1], rows[i][2], rows[i][3], 'curved');
+        if (to == from+1) {
+            curveClass = 'straight';
+        } else if (to == from) {
+            curveClass = 'loop';
+        }else {
+            curveClass = 'curved';
+        }
+        addEdgeToElementsDict(elementsDictionary, rows[i][0], rows[i][1], rows[i][2], curveClass);
         if (from > lastNodeIndex) {
             lastNodeIndex = from;
         }
@@ -363,12 +387,7 @@ function onSubmit() {
     makeGraph('generalChart', Object.values(masonsGainPage.elementsDict));
     //change to show numerator & denominator 
     let detStr = masonsGainPage.determinant.toString();
-    if (detStr == '0') {
-        masonsGainPage.pathDesc.innerHTML = `$$Total Signal Flow Graph Gain: \\frac{${masonsGainPage.numerator.toString()}}{${detStr}}$$`;
-    }
-    else {
-        masonsGainPage.pathDesc.innerHTML = `$$Total Signal Flow Graph Gain: ${(masonsGainPage.numerator.divide(masonsGainPage.determinant)).toString()}$$`;
-    }
+    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: <span class='left'>$$\\frac{${masonsGainPage.numerator.toString()}}{${detStr}}$$</span><br>`;
     masonsGainPage.signalFlowGraph.scrollIntoView();
     let loopNum = loops.length;
     let pathNum = pathArr.length, bgColor;
@@ -506,7 +525,7 @@ function getLoops (nodeList, forwardNodeList) {
     //for (let i=0; i<nodeList.length; i++) {//iterate through nodes
     for (let [key, edges] of Object.entries(nodeList)) {
         for (let j=0; j<edges.length; j++) {//iterate through list of edges
-            if (edges[j].endNode < key) {//found edge pointing backwards
+            if (edges[j].endNode <= key) {//found edge pointing backwards
                 addLoops(edges[j].endNode, key, edges[j].gain, forwardNodeList, loops);
             }
         }
@@ -594,22 +613,21 @@ function uncheckFileSubmit() {
 function uncheckTableSubmit() {//uncheckTableSubmit
     masonsGainPage.tableSubmit.checked = 0;
 }
-//called when Get Sample button is clicked. creates a sample edge list in the table.
-function getSample() {
+//called when Generate Sample button is clicked. creates a sample edge list in the table.
+function generateSample() {
     for (let i=0; i<7; i++) {//add several rows of edges connected to each other.
         addRow();
     }
     let rows = masonsGainPage.table.rows;
     let last = rows.length-1;
-    rows[last].children[1].children[0].value = 4;
-    rows[last].children[2].children[0].value = 2;
-    rows[last].children[3].children[0].value = 5;
-    rows[2].children[3].children[0].value = 3;
+    rows[last].children[0].children[0].value = 4;
+    rows[last].children[1].children[0].value = 2;
+    rows[last].children[2].children[0].value = 5;
+    rows[2].children[2].children[0].value = 3;
 }
 //add empty row to table
 function addRow() {
     let html = `<tr>
-    <td class='number'>${rowIndex}</td>
     <td><input type='text' class='from' value='${rowIndex}'></input></td>
     <td><input type='text' class='to' value='${rowIndex+1}'></td>
     <td><input type='text' class='gain' value='1'></input></td>
@@ -623,34 +641,16 @@ function removeLastRow() {
     if (rows.length > 1) {
         rows.last().remove();
     }
-}
-//remove the row specified by the index in the input field #rowNum 
-function removeRow() {
-    let num = parseInt($('#rowNum').val());
-    let rows = masonsGainPage.table.rows;
-    let len = rows.length;
-    for (let i=1; i<len; i++) {
-        if (parseInt(rows[i].cells[0].innerHTML) == num) {
-            rows[i].remove();
-            break;
-        }
-    }
+    rowIndex--;
 }
 //sets table html to default.
 function removeAllRows() {
     $('#table').html(`<tr>
-    <th>number</th>
     <th>from</th>
     <th>to</th>
     <th>gain</th>
   </tr>`);
-}
-//returns one if node number 'node' is within loop.
-function isInLoop(loop, node) {
-    if (node >= loop.to && node <= loop.from) {
-        return 1;
-    }
-    return 0;
+  rowIndex = 0;
 }
 function drawLoopChart(id, loop) {
     let elements = copyObjectJQuery(masonsGainPage.elementsDict);
@@ -666,7 +666,6 @@ function drawLoopChart(id, loop) {
     makeGraph(id, Object.values(elements));
 }
 function drawNonTouchingLoopSetChart(id, loopSet) {
-    //loopSet = mergeSortNonTouchingLoopSet(loopSet);//sort in ascending order w/ merge sort
     let elements = copyObjectJQuery(masonsGainPage.elementsDict), path, pathLen, loopNum = loopSet.length, loop;
     for (let loopIndex=0; loopIndex<loopNum; loopIndex++) {
         loop = loopSet[loopIndex];
@@ -694,57 +693,6 @@ function drawPathChart(id, pathObj) {
     }
     makeGraph(id, Object.values(elements));
 }
-//merge sort, but for a set of non-touching loops.
-function mergeSortNonTouchingLoopSet(loopSet) {
-    let temp;
-    if (loopSet.length == 2) {
-        if (loopSet[0].to > loopSet[1].to) {
-            temp = copyObjectJQuery(loopSet[0]);
-            loopSet[0] = copyObjectJQuery(loopSet[1]);
-            loopSet[1] = temp;
-            return loopSet;//sort two elements.
-        }
-        else {
-            return loopSet;//already sorted;
-        }
-    }
-    if (loopSet.length < 2) {
-        return loopSet;
-    }
-    let mid = parseInt(loopSet.length/2);
-    let leftHalf = loopSet.slice(0, mid);
-    let rightHalf = loopSet.slice(mid);
-    return mergeNonTouchingLoopSets(mergeSortNonTouchingLoopSet(leftHalf), mergeSortNonTouchingLoopSet(rightHalf));
-}
-//merge sorted sets of non-touching loops into larger ones.
-function mergeNonTouchingLoopSets(loopSet1, loopSet2) {
-    let loopSet3 = [];
-    let set1Index = 0;
-    let set2Index = 0;
-    let set1Len = loopSet1.length;
-    let set2Len = loopSet2.length;
-    while(set1Index < set1Len && set2Index < set2Len) {
-        if (loopSet1[set1Index].to < loopSet2[set2Index].to) {
-            loopSet3.push(loopSet1[set1Index]);
-            set1Index++;
-        }
-        else {
-            loopSet3.push(loopSet2[set2Index]);
-            set2Index++;
-        }
-    }
-    if (set1Len > set2Len) {
-        for (; set1Index<set1Len; set1Index++) {
-            loopSet3.push(loopSet1[set1Index]);
-        }
-    }
-    else if (set2Len > set1Len) {
-        for (; set2Index<set2Len; set2Index++) {
-            loopSet3.push(loopSet2[set2Index]);
-        }
-    }
-    return loopSet3;
-}
 function makeGraph(id, elements) {
     cytoscape({
         container: document.getElementById(id), // container to render in
@@ -767,7 +715,7 @@ function makeGraph(id, elements) {
           {
             selector: 'edge',
             style: {
-                'width': 3,
+                'width': 2,
                 'line-color': '#000',
                 'target-arrow-color': '#000',
                 'target-arrow-shape': 'triangle',  
@@ -790,8 +738,14 @@ function makeGraph(id, elements) {
           {
             selector: '.curved',//edges
             style: {
-              'curve-style': 'unbundled-bezier',
+              'curve-style': 'unbundled-bezier'
             }
+          },
+          {
+              selector: '.loop',
+              style: {
+                  'curve-style': 'loop'
+              }
           }
         ],
         layout: {

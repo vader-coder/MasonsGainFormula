@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="instructions.css">
+    <title>Instructions</title>
+  </head>
+  <body>
+    <h1>Instructions for Mason's Gain Formula Website</h1>
+    <p>The website can receive input through the table or as a .txt file. Use the buttons to add and remove rows on the table.</p>
+    <p>Pressing the 'Submit' button draws the relevant charts for the formula.</p>
+    <p>Each row in the input represents an edge. The website reads the list of edges from top to bottom.</p>
+    <p>The further to the top of the table or .txt file the first edge that contains a given node is, the further to the left in that node is graphed in the diagrams.</p>
+    <p>By default, the nodes are graphed along a horizontal axis but you can drag them to other locations; sometimes this renders the diagram more comprehensible.</p>
+    <p>Each edge's 'from' and 'to' nodes must be integers. The gain can consist of letters and numbers. For a subscript use an underscore (G<sub>s</sub> as G_s).</p>
+    <p>0 must always exist as the source node, and there must always be at least one forward path from it to the sink node.</p>
+    <p>It is recommended (though not required) that you enter the edges in one path from the source to sink node with each edge's from = it's 'to'-1, if such a path exists, before entering the loops or forward paths between nodes with nonadjacent numbers to minimize the likelihood of having to drag the nodes around to make the diagrams more easily comprehensible. </p>
+    <p>Press 'Get Sample' for an example of a table and visit <a href="https://github.com/vader-coder/MasonsGainFormula">the github repository</a> for examples of .txt files.</p>
+</body>
+</html>

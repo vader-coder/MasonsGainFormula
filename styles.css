@@ -1,3 +1,9 @@
+body {
+    background-image: url("double-bubble-outline/double-bubble-outline.png")
+}
+html, body, button, input, #fileInput {
+    font-family: 'Open Sans', 'Lato', Helvetica, Arial, sans-serif;
+}
 table {
     width: 30%;
 }
@@ -10,9 +16,6 @@ tr, th {
 textarea {
     width: 40vw;
     height: 25vh;
-}
-body {
-    font-family: Helvetica, Arial, sans-serif;
 }
 .halfWidthEach {/* Splits div in half in terms of screen width.*/
     display:grid;

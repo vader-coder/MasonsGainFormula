@@ -3,7 +3,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <link rel="shortcut icon" href="">
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+  <link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open%20Sans">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato">
+  <!--Favicon has roboto mono font, white letter, black background.-->
   <title>Manson's Gain Formula</title>
   <meta name="description" content="The HTML5 Herald">
   <meta name="author" content="SitePoint">
@@ -24,63 +30,67 @@
 </head>
 
 <body onload="onBodyLoad()">
-  <input type="button" onclick="addRow()" value="Add Row"></input>
-  <input type="button" onclick="removeLastRow()" value="Remove Last Row"></input>
-  <input type="button" onclick="removeAllRows()" value="Delete Rows"></input>
-  <input type="button" onclick="getSample()" value="Generate Sample"></input>
-  <!--<input type="button" onclick="removeRow()" value="Remove Row Number"></input>
-  <input type="text" id="rowNum" value="0"></input>-->
-  <br>
-  <table id="table">
-    <tr>
-      <th>number</th>
-      <th>from</th>
-      <th>to</th>
-      <th>gain</th>
-    </tr>
-  </table>
-  <br>
-  Enter the consecutive connections first in descending order (0, 1, etc), then the nonconsecutive ones.
-  <!-- Create a demo.-->
-  <br><br>
-  <input type="file" id="fileInput"></input><br>
-  <br><br>
-  <input type="radio" id="tableSubmit" onclick="uncheckFileSubmit()"></input>
-  <label for="tableSubmit">Submit Values Through Table</label>
-  <br>
-  <input type="radio" id="fileSubmit" checked onclick="uncheckTableSubmit()"></input>
-  <label for="fileSubmit">Submit Values Through File</label>
-  <br><br>
-  <input type="button" value="Submit" onclick="onSubmit()"></input><br>
-  <input type="button" value="Download File For Current Graph" onclick="downloadEdgeFile()"></input><br>
-  <textarea id="content-target"></textarea>
-  <div id="pageLinks"></div>
-  <br>The gain formula is as follows:
   <div class="halfWidthEach">
-    <div class="math">
-      <br><span class="left">$$G = \frac{y_\text{out}}{y_\text{in}} = \frac{ \sum_{k=1}^N  {G_k \Delta _k} }{ \Delta\ }$$</span>
-      <br><span class="left">$$\Delta = 1 - \sum L_i + \sum L_iL_j- \sum L_iL_jL_k + \cdots + (-1)^m \sum \cdots +\cdots$$</span>
+    <div>
+      <a href="instructions.html">How To Use This Site.</a><br>
+      <p><small>A portion of the code for this site was taken from an open source resource that requires attribution. <a href="attribution.html">View attribution.</a></small></p><br>
+      <input type="button" onclick="addRow()" value="Add Row"></input>
+      <input type="button" onclick="removeLastRow()" value="Remove Last Row"></input>
+      <input type="button" onclick="removeAllRows()" value="Delete Rows"></input>
+      <input type="button" onclick="generateSample()" value="Generate Sample"></input>
+      <br>
+      <table id="table">
+        <tr>
+          <th>from</th>
+          <th>to</th>
+          <th>gain</th>
+        </tr>
+      </table>
+      <br>
+      Enter the consecutive connections first in descending order (0, 1, etc), then the nonconsecutive ones.
+      <br><br>
+      <input type="file" id="fileInput"></input><br>
+      <br><br>
+      <input type="radio" id="tableSubmit" onclick="uncheckFileSubmit()"></input>
+      <label for="tableSubmit">Submit Values Through Table</label>
+      <br>
+      <input type="radio" id="fileSubmit" checked onclick="uncheckTableSubmit()"></input>
+      <label for="fileSubmit">Submit Values Through File</label>
+      <br><br>
+      <input type="button" value="Submit" onclick="onSubmit()"></input><br>
+      <input type="button" value="Download File For Current Graph" onclick="downloadEdgeFile()"></input><br>
+      <textarea id="content-target"></textarea>
+      <div id="pageLinks"></div>
     </div>
-    <div></div>
+    <div>
+      The gain formula is as follows:
+      <div class="halfWidthEach">
+        <div class="math">
+          <br><span class="left">$$G = \frac{y_\text{out}}{y_\text{in}} = \frac{ \sum_{k=1}^N  {G_k \Delta _k} }{ \Delta\ }$$</span>
+          <br><span class="left">$$\Delta = 1 - \sum L_i + \sum L_iL_j- \sum L_iL_jL_k + \cdots + (-1)^m \sum \cdots +\cdots$$</span>
+        </div>
+        <div></div>
+      </div>
+      <br>
+      where:
+      <ul>
+      <li>Δ = the determinant of the graph.</li>
+      <li>y<sub>in</sub> = input-node variable</li>
+      <li>y<sub>out</sub> = output-node variable</li>
+      <li>G = complete gain between y<sub>in</sub> and y<sub>out</sub></li>
+      <li>N = total number of forward paths between y<sub>in</sub> and y<sub>out</sub></li>
+      <li>G<sub>k</sub> = path gain of the kth forward path between y<sub>in</sub> and y<sub>out</sub></li>
+      <li>L<sub>i</sub> = loop gain of each closed loop in the system</li>
+      <li>L<sub>i</sub>L<sub>j</sub> = product of the loop gains of any two non-touching loops (no common nodes)</li>
+      <li>L<sub>i</sub>L<sub>j</sub>L<sub>k</sub> = product of the loop gains of any three pairwise nontouching loops</li>
+      <li>Δ<sub>k</sub> = the cofactor value of Δ for the k<sup>th</sup> forward path, with the loops touching the k<sup>th</sup> forward path removed. </li>
+      </ul>
+      <small><p>Descripton Liscenced under Wikipedia's 
+        <a href="https://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License">Creative Commons Attribution-ShareAlike License</a><br>
+        <a href="https://en.wikipedia.org/wiki/Mason%27s_gain_formula#Formula">Original Ariticle.</a>
+      </p></small>
+    </div>
   </div>
-  <br>
-  where:
-  <ul>
-  <li>Δ = the determinant of the graph.</li>
-  <li>y<sub>in</sub> = input-node variable</li>
-  <li>y<sub>out</sub> = output-node variable</li>
-  <li>G = complete gain between y<sub>in</sub> and y<sub>out</sub></li>
-  <li>N = total number of forward paths between y<sub>in</sub> and y<sub>out</sub></li>
-  <li>G<sub>k</sub> = path gain of the kth forward path between y<sub>in</sub> and y<sub>out</sub></li>
-  <li>L<sub>i</sub> = loop gain of each closed loop in the system</li>
-  <li>L<sub>i</sub>L<sub>j</sub> = product of the loop gains of any two non-touching loops (no common nodes)</li>
-  <li>L<sub>i</sub>L<sub>j</sub>L<sub>k</sub> = product of the loop gains of any three pairwise nontouching loops</li>
-  <li>Δ<sub>k</sub> = the cofactor value of Δ for the k<sup>th</sup> forward path, with the loops touching the k<sup>th</sup> forward path removed. </li>
-  </ul>
-  <small><p>Descripton Liscenced under Wikipedia's 
-    <a href="https://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License">Creative Commons Attribution-ShareAlike License</a><br>
-    <a href="https://en.wikipedia.org/wiki/Mason%27s_gain_formula#Formula">Original Ariticle.</a>
-  </p></small>
   <p id='totalGraphDesc'></p>
   <a href='#menu' id='signalFlowGraphLink'>Top Menu</a>
   <div id='signalFlowGraph'></div><br>
