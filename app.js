@@ -10,7 +10,6 @@ class Page {
         this.nonTouchingLoopGraphs = document.getElementById('nonTouchingLoopGraphs');
         this.pathGraphs = document.getElementById('forwardPathGraphs');
         this.pathDesc = document.getElementById('totalGraphDesc');
-        this.signalFlowGraph = document.getElementById('signalFlowGraph');
         this.determinantDesc = document.getElementById('determinantStr');
         this.numeratorHTML = document.getElementById('numeratorStr');
         this.table = document.getElementById('table');
@@ -80,35 +79,6 @@ function fileHandler(event) {
             outputTarget.value = content
         }).catch(error => { throw new Error(error) } );
     }
-}
-
-//return the gain of a loop from node # 'from' to node # 'to'
-function getLoopGain(toNode, from, adjacencyList) {
-    let adjItem = adjacencyList[from], adjItemLen = adjacencyList[from].length, 
-    gain = toNode.gain, to = toNode.endNode;
-    let adjLen = adjacencyList.length, currentNode = to;
-    //loop through adjacency list starting at 'to', 
-    //find gain of all edges between 'to' and 'from' besides the one that points backwards
-    //from 'from' to 'to'. 
-    //by default, 'gain' is set to gain of that backwards edge. 
-    /* could we just use index 0 for this loop?*/
-    for (let adjIndex=to; adjIndex<adjLen; adjIndex++) {
-        adjItem = adjacencyList[adjIndex];
-        adjItemLen = adjItem.length;
-        for (let i=0; i<adjItemLen; i++) {
-            if (adjItem[i].endNode == (currentNode+1)) {
-                gain = gain.multiply(adjItem[i].gain);
-                break;
-            }
-        }
-        if (currentNode == from-1) {
-            break;
-        }
-        else {
-            currentNode++;
-        }
-    }
-    return gain;
 }
 //gets list of edges from a table & assigns them to an adjacency list.
 //creates seperate adjacency list of only the edges with a forward direction.
@@ -381,47 +351,42 @@ function onSubmit() {
     masonsGainPage.loopGraphs.innerHTML = '';
     masonsGainPage.nonTouchingLoopGraphs.innerHTML = '';
     masonsGainPage.pathGraphs.innerHTML = '';
-    masonsGainPage.signalFlowGraph.innerHTML = '';
 
     //signal flow graph without any pink to emphasize one path or loop
     makeGraph('generalChart', Object.values(masonsGainPage.elementsDict));
     //change to show numerator & denominator 
     let detStr = masonsGainPage.determinant.toString();
-    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: <span class='left'>$$\\frac{${masonsGainPage.numerator.toString()}}{${detStr}}$$</span><br>`;
-    masonsGainPage.signalFlowGraph.scrollIntoView();
+    masonsGainPage.pathDesc.innerHTML = `Total Signal Flow Graph Gain: $$\\frac{${masonsGainPage.numerator.toString()}}{${detStr}}$$<br>`;
     let loopNum = loops.length;
     let pathNum = pathArr.length, bgColor;
-    let loopBackGround1 = '#e8f4f8';
-    let pathBackGround1 = '#FFE6EE';
-    let pathBackGround2 = '#FAEBD7';
-    let yCaption = `<div class="halfWidthEach"><div class="math"><div class="left">$$y_\\text{in}:$$</div></div><div></div></div><br>`;
+    let yCaption = `$$y_\\text{in}:$$`;
     masonsGainPage.determinantDesc.innerHTML = yCaption+masonsGainPage.denominatorDesc+masonsGainPage.denominatorStr;
     masonsGainPage.numeratorHTML.innerHTML = `$$y_\\text{out}:$$` + masonsGainPage.numeratorDesc+masonsGainPage.numeratorStr;
-    MathJax.typeset();//MathJax renders new TeX inputted by html.
+    MathJax.typeset();//MathJax renders new TeX that JavaScript put into html.
     if (loopNum > 0) {
         //draw chart & show descriptions for each loop
         for (let i=0; i<loopNum; i++) {
             if (i%2) {
-                bgColor = pathBackGround1;
+                bgColor = 'pink';
             }
             else {
-                bgColor = loopBackGround1;
+                bgColor = 'blue';
             }
             //insert a discription for a loop.
-            masonsGainPage.loopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
-            <p>Loop ${i} Gain: ${loops[i].gain.toString()} <a href='#menu'>Top Menu</a></p><div id='loop${i}' class='cytoscapeChart'></div></div>`);
+            masonsGainPage.loopGraphs.insertAdjacentHTML('beforeend', `<div class='${bgColor}'>
+            <p>Loop ${i} Gain: ${loops[i].gain.toString()} <a href='#topOfPage'>Top Menu</a></p><div id='loop${i}' class='cytoscapeChart'></div></div>`);
             drawLoopChart(`loop${i}`, loops[i]);
         }
         //draw chart & show descriptions for each collection of non-touching loops.
         for (let i=loopNum%2; i<nonTouchingLoops.length; i++) {
             if (i%2) {
-                bgColor = pathBackGround1;
+                bgColor = 'pink';
             }
             else {
-                bgColor = loopBackGround1;
+                bgColor = 'blue';
             }
-            masonsGainPage.nonTouchingLoopGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
-            <p>${nonTouchingLoops[i].length} Loops in Non-Touching Loops Set #${i} Gain: ${nonTouchingLoops[i].gain.toString()} <a href='#menu'>Top Menu</a></p>
+            masonsGainPage.nonTouchingLoopGraphs.insertAdjacentHTML('beforeend', `<div class='${bgColor}'>
+            <p>${nonTouchingLoops[i].length} Loops in Non-Touching Loops Set #${i} Gain: ${nonTouchingLoops[i].gain.toString()} <a href='#topOfPage'>Top Menu</a></p>
             <div id='nonTouchingLoop${i}' class='cytoscapeChart'></div></div>`);
             drawNonTouchingLoopSetChart(`nonTouchingLoop${i}`, nonTouchingLoops[i].loops);
         }
@@ -430,28 +395,29 @@ function onSubmit() {
         //draw chart & set description for each forward path.
         for (let i=0; i<pathNum; i++) {
             if (i%2) {
-                bgColor = pathBackGround1;
+                bgColor = 'pink';
             }
             else {
-                bgColor = pathBackGround2;
+                bgColor = 'antiqueWhite';
             }
-            masonsGainPage.pathGraphs.insertAdjacentHTML('beforeend', `<div style='background-color: ${bgColor}'>
-            <p>Forward Path ${i} Gain: ${pathArr[i].gain.toString()} <a href='#menu'>Top Menu</a></p><div id='path${i}' class='cytoscapeChart'></div></div>`);
+            masonsGainPage.pathGraphs.insertAdjacentHTML('beforeend', `<div class='${bgColor}'>
+            <p>Forward Path ${i} Gain: ${pathArr[i].gain.toString()} <a href='#topOfPage'>Top Menu</a></p><div id='path${i}' class='cytoscapeChart'></div></div>`);
             drawPathChart(`path${i}`, pathArr[i]);
         }
     }
-    masonsGainPage.pageLinks.innerHTML = `<div id='menu'>Menu: <br><a href='#signalFlowGraphLink'>Plain Signal Flow Graph</a><br><a href='#loopGraphs'>Individual Loop Charts</a><br><a href='#nonTouchingLoopGraphs'>Non-Touching Loops Charts</a><br><a href='#forwardPathGraphs'>Forward Path Charts</a></div>`;
+    //display menu on page. 
+    masonsGainPage.pageLinks.innerHTML = `<div id='menu'>Menu: <br><a href='#generalChart'>Plain Signal Flow Graph</a><br><a href='#loopGraphs'>Individual Loop Charts</a><br><a href='#nonTouchingLoopGraphs'>Non-Touching Loops Charts</a><br><a href='#forwardPathGraphs'>Forward Path Charts</a></div>`;
 }
-//pass in list loops & forward paths to get numerator of Mason's Gain Formula.
+//pass in lists of loops & forward paths to get numerator of Mason's Gain Formula.
 function getMasonsNumerator(loops, paths) {
     let pathsNum = paths.length;
     let loopNum = loops.length;
     let loopsPruned, numerator = nerdamer('0'), numeratorComponet, sumNum;
     //for each path, calculate determinant & gain; path determinant only uses loops not touching it.
-    for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {//loop through loops
+    for (let pathIndex = 0; pathIndex<pathsNum; pathIndex++) {//loop through paths
         loopsPruned = [];
         //construct list of loops not touching forward path paths[pathIndex]
-        for (let loopIndex = 0; loopIndex < loopNum; loopIndex++) {
+        for (let loopIndex = 0; loopIndex < loopNum; loopIndex++) {//loop through loops
             if (!loops[loopIndex].isTouchingPath(paths[pathIndex].path)) {
                 //only push loop to loopsPruned if it doesn't touch forward path. 
                 loopsPruned.push(loops[loopIndex]);
@@ -464,7 +430,7 @@ function getMasonsNumerator(loops, paths) {
         sumNum = pathIndex+1;
         //description of a componet: 
         masonsGainPage.numeratorDesc += `$$G_${sumNum} \\Delta _${sumNum} = ${paths[pathIndex].gain.toString()}\\cdot${paths[pathIndex].determinant.toString()}$$<br>`;
-        //add componets to string showing their sum. 
+        //add componets to a string showing their sum. 
         if (!pathIndex) {//don't want the first one to have a + out front.
             masonsGainPage.numeratorStr += ` ${numeratorComponet.toString()}`;
         }
@@ -480,40 +446,42 @@ function getMasonsNumerator(loops, paths) {
 function copyObjectJQuery (obj) {
    return jQuery.extend(true, {}, obj);
 }
-//copy a 1D array.
+//shallow copy of a 1D array.
 function copy1DArr(arr) {
     return arr.slice();
 }
-//returns list of all possible sets of items in 'list' with length 'setlen'
-//order is irrelevant.
+//returns list of all possible subsets with length 'setlen' of set of items in 'list'
+//order is irrelevant. items can be anything, including numbers, strings, and objects.
 function getSetsOfCombinations(list, setLen) {
     set = [];
     setOfSets = [];
     getSet(list, set, setLen, 0, 0, setOfSets);
     return setOfSets;
 }
-//recursively finds list of all possible sets of items in 'list' with length 'setTargetLen'
-//and assigns it to 'setOfSets'. listIndex is current index in 'list', setIndex tracks
+//recursively finds list of all possible subsets with length 'setlen' of set of items in 'list'
+//and appends it to 'setOfSets'. listIndex is current index in 'list', setIndex tracks
 //length of 'set'.  
 function getSet(list, set, setTargetLen, setIndex, listIndex, setOfSets) {
     if (setIndex == setTargetLen) {//when 'set' reaches target length, add it to setOfSets.
         setOfSets.push(set);
     }
     else if (listIndex < list.length) {
-        let newSet = copy1DArr(set);//don't need a deep copy since not changing loop attributes.
-        let newElement = list[listIndex];
-        //based on whether setIndex has been incremented in the last call or not, 
-        //choose whether to add the next element in the list to the set
+        let newSet = copy1DArr(set);//shallow copy is sufficient since not changing loop attributes.
+        let newElement = list[listIndex];//newer item is the next element in 'list'.
         if (setIndex == set.length) {
+            //if setIndex was incremented immediately before the current function call,
+            //then append the new item to the list
             newSet.push(newElement);
         }
-        else {
+        else {//otherwise, switch out the last item for the newest item.
             newSet[setIndex] = newElement;
         }
         listIndex++;
-        //for each new value in 'list', call getSet twice: 
+        //call getSet twice: 
         //due to the difference in setIndex,
-        //one call will add the new value to its 'set' & the other won't. 
+        //if listIndex < list.length & setindex != setTargetLen,
+        //first call will switch the last item with a newer item,
+        //the second will append a newer item to the list.
         getSet(list, newSet, setTargetLen, setIndex, listIndex, setOfSets);
         setIndex++;
         getSet(list, newSet, setTargetLen, setIndex, listIndex, setOfSets);
@@ -522,10 +490,10 @@ function getSet(list, set, setTargetLen, setIndex, listIndex, setOfSets) {
 //use adjacency list of nodes to get array of loops
 function getLoops (nodeList, forwardNodeList) {
     let loops = [];
-    //for (let i=0; i<nodeList.length; i++) {//iterate through nodes
-    for (let [key, edges] of Object.entries(nodeList)) {
-        for (let j=0; j<edges.length; j++) {//iterate through list of edges
-            if (edges[j].endNode <= key) {//found edge pointing backwards
+    for (let [key, edges] of Object.entries(nodeList)) {//iterate through nodes
+        for (let j=0; j<edges.length; j++) {//iterate through list of edges in current node
+            if (edges[j].endNode <= key) {
+                //found edge pointing backwards, add loops associated with that edge to the list of loops.
                 addLoops(edges[j].endNode, key, edges[j].gain, forwardNodeList, loops);
             }
         }
@@ -534,17 +502,17 @@ function getLoops (nodeList, forwardNodeList) {
 }
 //calculate determinant of list of loops using an array of loops.
 //makeNonTouchingLoopsList flag tells whether we need to make an list of non-touching loops.
-//assume at least one loop. 
+//assume at least one loop in list. 
 function getDeterminant (loops, makeNonTouchingLoopsList) {
     let determinant = nerdamer('1'), loopNum = loops.length, det, detComponet;
     let set, sets, label = ``;
     for (let i=1; i<=loopNum; i++) {
-        sets = getSetsOfCombinations(loops, i);//get possible sets of length i
+        sets = getSetsOfCombinations(loops, i);//get all possible sets (subsets of 'loops') of length i
         detComponet = nerdamer('0');
         for (let j=0; j<sets.length; j++) {
             //loop through sets and add determinant of set if none of the loops in the set share a node.
             set = sets[j];
-            det = getNLoopsGain(set, set.length, makeNonTouchingLoopsList);
+            det = getNLoopsGainProduct(set, set.length, makeNonTouchingLoopsList);
             determinant = determinant.add(det);//construct sum of all determinants of all sets of non-touching loops
             detComponet = detComponet.add(det);//construct sum of determinants of sets of non-touching loops of length i
         }
@@ -558,45 +526,47 @@ function getDeterminant (loops, makeNonTouchingLoopsList) {
             masonsGainPage.denominatorStr += `+ ${detComponet.toString()}`;
             for (let j=0; j<i; j++) {
                 label+=`L_${masonsGainPage.loopLabels[j]}`;
-            }//is .replace(/\*/g,"\\cdot") worth the time?
+            }
             masonsGainPage.denominatorDesc += `$$(-1)^${i} \\cdot \\sum_{} {${label}}: ${detComponet.toString()}$$<br>`;
             label = ``;
         }
     }
     return determinant;
 }
-//get gain contribution for a specific set of non-touching loops.
-function getNLoopsGain(loops, loopNum, makeNonTouchingLoopsList) {
-    let gainComponet = nerdamer('1');
+//get product of gains for a set of non-touching loops.
+//this is the L_i*L_j*L_k part of the formula.
+function getNLoopsGainProduct(loops, loopNum, makeNonTouchingLoopsList) {
+    let gainProduct = nerdamer('1');
     let j;
     if (loopNum > 1) {
         for (let i=0; i<loopNum; i++) {
             j = i+1;
             while (j < loopNum) {
-                //if any loops in the collection share a node, contributin is 0 since must be non-touching.
-                if (doLoopsShareANode(loops[i], loops[j])) {
+                //if any loops in the collection touch, gain product is 0 
+                //since we only want product of gains of loops in a set of non-touching loops.
+                if (doLoopsTouch(loops[i], loops[j])) {
                     return 0;
                 }
                 j++;
             }
             //multiply loop gains together to get gain componet.
-            gainComponet = loops[i].gain.multiply(gainComponet);
+            gainProduct = loops[i].gain.multiply(gainComponet);
         }
         if (makeNonTouchingLoopsList) {
-            masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainComponet));
-            //if set of loops don't touch, push them to the list of non-touching loops. 
+            masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainProduct));
+            //if set of loops don't touch, push them to the list of non-touching loop sets. 
         }
     }
-    else {//if only 1 loop, gain componet is that loop's gain.
-        gainComponet = loops[0].gain;
+    else {//if only 1 loop, product of gains is that loop's gain.
+        gainProduct = loops[0].gain;
     }
-    //gain componet's sign depends on how many loops there are in the collection.
-    return gainComponet.multiply(Math.pow(-1, loopNum).toString());
+    //product of gains' sign depends on how many loops there are in the collection.
+    return gainProduct.multiply(Math.pow(-1, loopNum).toString());
 }
-//returns 1 if the loops share a node, else returns 0.
-//can't share an edge w/o sharing a node.
-function doLoopsShareANode (loop1, loop2) {//loop objects as parametrs
-    //if either endpoint of one loop is inside the other loop, then they share a node.
+//returns 1 if the loops touch, otherwise returns 0.
+function doLoopsTouch (loop1, loop2) {//loop objects as parametrs
+    //if either endpoint of one loop is inside the other loop, then they touch
+    //this only works if nodes are laid out in an increasing order (no 2 5 6 3)
     if (loop1.to <= loop2.from && loop1.to >= loop2.to) {
         return 1;
     }
@@ -625,7 +595,7 @@ function generateSample() {
     rows[last].children[2].children[0].value = 5;
     rows[2].children[2].children[0].value = 3;
 }
-//add empty row to table
+//add row to table with a gain of one.
 function addRow() {
     let html = `<tr>
     <td><input type='text' class='from' value='${rowIndex}'></input></td>
@@ -635,7 +605,7 @@ function addRow() {
     $('#table').append(html);
     rowIndex++;
 }
-//deletes last row from tree
+//deletes last row from table
 function removeLastRow() {
     let rows = $('#table tr');
     if (rows.length > 1) {
@@ -643,7 +613,7 @@ function removeLastRow() {
     }
     rowIndex--;
 }
-//sets table html to default.
+//empties table by setting html table to default.
 function removeAllRows() {
     $('#table').html(`<tr>
     <th>from</th>
@@ -652,47 +622,52 @@ function removeAllRows() {
   </tr>`);
   rowIndex = 0;
 }
+//draw chart for loop in DOM element w/ id 'id'
 function drawLoopChart(id, loop) {
     let elements = copyObjectJQuery(masonsGainPage.elementsDict);
-    let path = loop.path;//copy1DArr(loop.path).map(x => x.toString());
+    //elements = dictionary containing nodes & edges in a format that makeGraph() can graph.
+    let path = loop.path;
     let pathLen = path.length;
-    //turn all nodes in the path pink
+    //turn all nodes & edges in loop path pink
     elements[path[0].toString()].classes = 'pink';
     for (let i=1; i<pathLen; i++) {
-        elements[`${path[i]}`].classes = 'pink';
-        elements[`${path[i-1]}->${path[i]}`].classes += ' pink';//edge between previous node and current node in path to pink
+        elements[`${path[i]}`].classes = 'pink';//current node
+        elements[`${path[i-1]}->${path[i]}`].classes += ' pink';//edge between previous node and current node
     }
-    elements[`${loop.from}->${loop.to}`].classes += ' pink';//turn looped edge pink.
+    elements[`${loop.from}->${loop.to}`].classes += ' pink';//turn backwards loop edge pink.
     makeGraph(id, Object.values(elements));
 }
+//draw chart for set of non-touching loops in DOM element w/ id 'id'
 function drawNonTouchingLoopSetChart(id, loopSet) {
     let elements = copyObjectJQuery(masonsGainPage.elementsDict), path, pathLen, loopNum = loopSet.length, loop;
-    for (let loopIndex=0; loopIndex<loopNum; loopIndex++) {
+    for (let loopIndex=0; loopIndex<loopNum; loopIndex++) {//loop through set of loops
         loop = loopSet[loopIndex];
         path = loop.path;
         pathLen = path.length;
-        //turn all nodes in the path pink
+        //turn all nodes & edges in loop the path pink
         elements[path[0].toString()].classes = 'pink';
         for (let i=1; i<pathLen; i++) {
-            elements[`${path[i]}`].classes = 'pink';
-            elements[`${path[i-1]}->${path[i]}`].classes += ' pink';//edge between previous node and current node in path to pink
+            elements[`${path[i]}`].classes = 'pink';//current node
+            elements[`${path[i-1]}->${path[i]}`].classes += ' pink';//edge between previous node and current node
         }
-        elements[`${loop.from}->${loop.to}`].classes += ' pink';//turn looped edge pink.
+        elements[`${loop.from}->${loop.to}`].classes += ' pink';//turn backwards loop edge pink.
     }
     makeGraph(id, Object.values(elements));
 }
+//draw chart for forward path in DOM element w/ id 'id'
 function drawPathChart(id, pathObj) {
     let elements = copyObjectJQuery(masonsGainPage.elementsDict);
     let path = pathObj.path;
     let pathLen = path.length;
-    //turn all nodes in the path pink
+    //turn all nodes & edges in the path pink
     elements[path[0].toString()].classes = 'pink';
     for (let i=1; i<pathLen; i++) {
-        elements[`${path[i]}`].classes = 'pink';
-        elements[`${path[i-1]}->${path[i]}`].classes += ' pink';//edge between previous node and current node in path to pink
+        elements[`${path[i]}`].classes = 'pink';//current node
+        elements[`${path[i-1]}->${path[i]}`].classes += ' pink';//edge between previous node and current node
     }
     makeGraph(id, Object.values(elements));
 }
+//use cytoscape library to make an svg graph in DOM element w/ id 'id' using array of elements (nodes & edges)
 function makeGraph(id, elements) {
     cytoscape({
         container: document.getElementById(id), // container to render in
@@ -702,7 +677,7 @@ function makeGraph(id, elements) {
           {
             selector: 'node',
             style: {
-              'background-color': '#000',
+              'background-color': '#000',//black nodes
               'label': 'data(id)'
             }
           },

@@ -21,11 +21,23 @@ textarea {
     display:grid;
     grid-template-columns: 1fr 1fr;
 }
+#menu {
+    background-color: #E8E8E8;
+}
 .left {
     float: left;
 }
 .cytoscapeChart {
-    width: 75vw;
+    width: 40vw;
     height: 75vh;
     display: block;
+}
+.blue {
+    background-color: #e8f4f8;
+}
+.pink {
+    background-color: #FFE6EE;
+}
+.antiqueWhite {
+    background-color: #FAEBD7;
 }
