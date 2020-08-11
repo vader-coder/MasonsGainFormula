@@ -550,7 +550,7 @@ function getNLoopsGainProduct(loops, loopNum, makeNonTouchingLoopsList) {
                 j++;
             }
             //multiply loop gains together to get gain componet.
-            gainProduct = loops[i].gain.multiply(gainComponet);
+            gainProduct = loops[i].gain.multiply(gainProduct);
         }
         if (makeNonTouchingLoopsList) {
             masonsGainPage.nonTouchingLoops.push(new LoopCollection(loops, gainProduct));

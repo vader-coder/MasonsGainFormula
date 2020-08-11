@@ -21,6 +21,16 @@ textarea {
     display:grid;
     grid-template-columns: 1fr 1fr;
 }
+.pad {
+    padding: 2em;
+}
+.adjacent {
+    display: inline-block;
+    float: left;
+}
+.smallerFontSize {
+    font-size: 0.80em;
+}
 #menu {
     background-color: #E8E8E8;
 }

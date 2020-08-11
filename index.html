@@ -62,19 +62,10 @@
         </div>
         <div id="pageLinks"></div>
       </div>
-      <!--<input type="file" id="fileInput"></input><br>
-      <br><br>
-      <input type="radio" id="tableSubmit" onclick="uncheckFileSubmit()"></input>
-      <label for="tableSubmit">Submit Values Through Table</label>
-      <br>
-      <input type="radio" id="fileSubmit" checked onclick="uncheckTableSubmit()"></input>
-      <label for="fileSubmit">Submit Values Through File</label>-->
       <br><br>
       <input type="button" value="Submit" onclick="onSubmit()"></input><br>
       <input type="button" value="Download File For Current Graph" onclick="downloadEdgeFile()"></input><br>
       <textarea id="content-target"></textarea>
-      <p id='totalGraphDesc'></p><br>
-      <a href='#topOfPage' id='signalFlowGraphLink'>Top Menu</a>
     </div>
     <div>
       The gain formula is as follows:
@@ -103,6 +94,14 @@
         <a href="https://en.wikipedia.org/wiki/Wikipedia:Text_of_Creative_Commons_Attribution-ShareAlike_3.0_Unported_License">Creative Commons Attribution-ShareAlike License</a><br>
         <a href="https://en.wikipedia.org/wiki/Mason%27s_gain_formula#Formula">Original Ariticle.</a>
       </small></p>
+    </div>
+  </div>
+  <div class="halfWidthEach">
+    <div>
+      <p id='totalGraphDesc'></p><br>
+      <a href='#topOfPage' id='signalFlowGraphLink'>Top Menu</a>
+    </div>
+    <div>
       Signal Flow Graph:<br>
       <div id='generalChart' class="cytoscapeChart"></div>
     </div>
