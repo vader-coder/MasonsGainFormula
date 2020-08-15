@@ -113,7 +113,7 @@ function getEdgesFromTable() {
         }
     }
     lastNodeIndex = nodeList[nodeList.length-1][0].endNode;
-    let straightOrCurved;
+    let straightOrCurved, classStr = '';
     while (i<rowNum) {//get the edges between non-consecutive nodes..
         addEdgeToAdjacencyListDict(nodeList, from, to, gain);
         if (!nodeList[from]) {//otherwise, must be from last node.
@@ -122,12 +122,16 @@ function getEdgesFromTable() {
         if (to > from) {//if edge is pointing forward/rightward, add to forwardNodeList
             addEdgeToAdjacencyListDict(forwardNodeList, from, to, gain);
         }
+        else if (from > to) {
+            classStr = 'backward ';
+        }
         if (to == from+1) {
             straightOrCurved = 'straight';
         } else {
             straightOrCurved = 'curved';
         }
-        addEdgeToElementsDict(elementsDictionary, `${from}`, `${to}`, `${gain}`, straightOrCurved);
+        classStr += straightOrCurved;
+        addEdgeToElementsDict(elementsDictionary, `${from}`, `${to}`, `${gain}`, classStr);
         if (from > lastNodeIndex) {
             lastNodeIndex = from;
         }
@@ -227,22 +231,21 @@ function getEdgesFromFile() {
         }
     }
     //get the edges nonconsecutive nodes not right next to each other.
-    let curveClass;
+    let curveClass, classStr = '';
     for (; i<rowNum; i++) {
         from = parseInt(rows[i][0]);
         to = parseInt(rows[i][1]);
         gain = nerdamer(rows[i][2]);
         addEdgeToAdjacencyListDict(nodeList, from, to, gain);
-        /*if (nodeList[from]) {
-            //nodeList[from].push(new Edge(to, gain));
-        }*/
         if (!nodeList[from]) {//otherwise, must be from last node.
-            //nodeList.push([new Edge(to, gain)]);
             nodeNum = nodeList.length;
         }
         if (to > from) {//if edge points forward/rightward, add to forwardNodeList
             //forwardNodeList[from].push(new Edge(to, gain));
             addEdgeToAdjacencyListDict(forwardNodeList, from, to, gain);
+        }
+        else if (from > to) {
+            classStr = 'backward ';
         }
         if (to == from+1) {
             curveClass = 'straight';
@@ -251,7 +254,8 @@ function getEdgesFromFile() {
         }else {
             curveClass = 'curved';
         }
-        addEdgeToElementsDict(elementsDictionary, rows[i][0], rows[i][1], rows[i][2], curveClass);
+        classStr += curveClass;
+        addEdgeToElementsDict(elementsDictionary, rows[i][0], rows[i][1], rows[i][2], classStr);
         if (from > lastNodeIndex) {
             lastNodeIndex = from;
         }
@@ -678,7 +682,9 @@ function makeGraph(id, elements) {
             selector: 'node',
             style: {
               'background-color': '#000',//black nodes
-              'label': 'data(id)'
+              'label': 'data(id)',
+              'width': '1em',
+              'height': '1em'
             }
           },
           {
@@ -692,32 +698,41 @@ function makeGraph(id, elements) {
             style: {
                 'width': 2,
                 'line-color': '#000',
-                'target-arrow-color': '#000',
-                'target-arrow-shape': 'triangle',  
-                'label': 'data(gain)'
+                'mid-target-arrow-color': '#000',
+                'mid-target-arrow-shape': 'triangle-backcurve',  
+                'label': 'data(gain)',
+                'text-margin-y':'-10',
+                'text-margin-x':'-5'
             }
           },
           { 
-              selector: 'edge.pink',
+              selector: 'edge.pink',//make edges and arrows pink
               style: {
                 'line-color': '#e75480',
-                'target-arrow-color': '#e75480'
+                'mid-target-arrow-color': '#e75480'
               }
           },
           {
-            selector: '.straight',//edges
+              selector: 'edge.backward',//edge points backwards, then position label beneath arrow
+              style: {
+                  'text-margin-y': '11',
+                  'text-margin-x':'5'
+              }
+          },
+          {
+            selector: '.straight',//straight edges
             style: {
               'curve-style': 'straight'//bezier
             }
           },
           {
-            selector: '.curved',//edges
+            selector: '.curved',//curved edges
             style: {
               'curve-style': 'unbundled-bezier'
             }
           },
           {
-              selector: '.loop',
+              selector: '.loop',//self-loop
               style: {
                   'curve-style': 'loop'
               }
