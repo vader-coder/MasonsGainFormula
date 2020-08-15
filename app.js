@@ -399,10 +399,10 @@ function onSubmit() {
         //draw chart & set description for each forward path.
         for (let i=0; i<pathNum; i++) {
             if (i%2) {
-                bgColor = 'pink';
+                bgColor = 'blue';
             }
             else {
-                bgColor = 'antiqueWhite';
+                bgColor = 'pink';
             }
             masonsGainPage.pathGraphs.insertAdjacentHTML('beforeend', `<div class='${bgColor}'>
             <p>Forward Path ${i} Gain: ${pathArr[i].gain.toString()} <a href='#topOfPage'>Top Menu</a></p><div id='path${i}' class='cytoscapeChart'></div></div>`);
@@ -410,7 +410,13 @@ function onSubmit() {
         }
     }
     //display menu on page. 
-    masonsGainPage.pageLinks.innerHTML = `<div id='menu'>Menu: <br><a href='#generalChart'>Plain Signal Flow Graph</a><br><a href='#loopGraphs'>Individual Loop Charts</a><br><a href='#nonTouchingLoopGraphs'>Non-Touching Loops Charts</a><br><a href='#forwardPathGraphs'>Forward Path Charts</a></div>`;
+    masonsGainPage.pageLinks.innerHTML = `<div id='menu'>Menu: <br><a href='#generalChart'>Plain Signal Flow Graph</a><br>
+    <a href='#numeratorStr'>y<sub>out</sub></a><br>
+    <a href='#determinantStr'>y<sub>in</sub></a><br>
+    <a href='#loopGraphs'>Individual Loop Charts</a><br>
+    <a href='#nonTouchingLoopGraphs'>Non-Touching Loops Charts</a><br>
+    <a href='#forwardPathGraphs'>Forward Path Charts</a>
+    </div>`;
 }
 //pass in lists of loops & forward paths to get numerator of Mason's Gain Formula.
 function getMasonsNumerator(loops, paths) {
